@@ -1,0 +1,297 @@
+definitions:
+  models.Account:
+    properties:
+      balance:
+        type: number
+      id:
+        type: integer
+      name:
+        type: string
+      type:
+        description: cash, bank
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.Transaction:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      category:
+        type: string
+      date:
+        type: string
+      id:
+        type: integer
+      type:
+        description: income, expense
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.UpdateDefaultReq:
+    properties:
+      account_id:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      default_account_id:
+        type: integer
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      monthly_budget:
+        description: เพิ่มฟิลด์งบประมาณรายเดือน
+        type: number
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API สำหรับระบบบันทึกรายรับรายจ่าย
+  title: Expense App API
+  version: "1.0"
+paths:
+  /api/accounts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Account'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get all accounts
+      tags:
+      - Accounts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account Data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/models.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Account'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new account
+      tags:
+      - Accounts
+  /api/accounts/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account Data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/models.Account'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Update account name
+      tags:
+      - Accounts
+  /api/accounts/default:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Default Account ID
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateDefaultReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update default account
+      tags:
+      - Accounts
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login and get JWT token
+      tags:
+      - Auth
+  /api/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get user profile
+      tags:
+      - Auth
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
+  /api/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: float64
+              type: number
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get income and expense summary
+      tags:
+      - Dashboard
+  /api/transactions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Transaction'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get transaction history
+      tags:
+      - Transactions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Transaction Data
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/models.Transaction'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Transaction'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new transaction
+      tags:
+      - Transactions
+  /api/user/budget:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Monthly Budget
+        in: body
+        name: budget
+        required: true
+        schema:
+          additionalProperties:
+            format: float64
+            type: number
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update monthly budget
+      tags:
+      - Users
+securityDefinitions:
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

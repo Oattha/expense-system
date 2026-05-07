@@ -1,0 +1,34 @@
+C:\expense-system\
+├── client/                 # ส่วนของหน้าบ้าน (React + Vite)
+│   ├── src/
+│   │   ├── api/            # จัดการ Axios Instance & Interceptors
+│   │   ├── components/     # UI Components (Navbar, Sidebar, Card)
+│   │   ├── contexts/       # เก็บ State กลาง เช่น ข้อมูล User, ยอดเงินในบัญชี
+│   │   ├── hooks/          # Custom Hooks สำหรับดึงข้อมูล API
+│   │   ├── pages/          # หน้าหลัก: Login, Register, Dashboard, History
+│   │   ├── utils/          # ฟังก์ชันช่วย เช่น จัดรูปแบบตัวเลขเงิน, วันที่
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── .env                # เก็บ VITE_API_URL
+│   └── package.json
+│
+├── server/                 # ส่วนของหลังบ้าน (Go Fiber)
+│   ├── common/             # การเชื่อมต่อฐานข้อมูลและ Redis
+│   │   ├── database.go     # เชื่อมต่อ Postgres/MySQL (GORM)
+│   │   └── redis.go        # เชื่อมต่อ Redis (ภาพ image_1e157c.png ยืนยันว่าต่อติดแล้ว)
+│   ├── controllers/        # ตัวควบคุม Logic (Auth, Transaction, Dashboard)
+│   ├── middleware/         # ดักจับ JWT และจัดการ Error
+│   ├── models/             # นิยามโครงสร้างข้อมูล (User, Account, Transaction)
+│   ├── routes/             # กำหนดเส้นทาง API (Endpoints)
+│   ├── utils/              # ฟังก์ชันเสริม เช่น การ Hash Password
+│   ├── .env                # เก็บ DB_URL, REDIS_URL, JWT_SECRET
+│   ├── go.mod              # จัดการ Dependencies ของ Go
+│   └── main.go             # จุดเริ่มต้นรันโปรแกรม (Entry Point)
+│
+└── docker-compose.yml      # (Optional) สำหรับรัน DB และ Redis พร้อมกันแบบง่ายๆ
+
+{
+  "username": "oattha_dev",
+  "password": "123456"
+}
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzc3ODM3MDUsInVzZXJfaWQiOjF9.jo9GkXz2h_cNVODa94BykS5aTEqUZ2AI1fsBgoa4Q7E

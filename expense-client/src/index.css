@@ -1,0 +1,18 @@
+/* index.css */
+@import "tailwindcss";
+
+@theme {
+  --font-kanit: "Kanit", sans-serif;
+}
+
+/* บังคับใช้ Kanit กับทุกอย่างในแอปครับพี่ */
+* {
+  font-family: "Kanit", sans-serif !important;
+}
+
+body {
+  font-family: var(--font-kanit);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
