@@ -17,7 +17,7 @@ func main() {
 	godotenv.Load()
 
 	common.ConnectDatabase()
-	common.ConnectRedis()
+	// common.ConnectRedis()
 
 	app := fiber.New()
 
