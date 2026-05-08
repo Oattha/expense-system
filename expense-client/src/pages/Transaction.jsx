@@ -88,7 +88,7 @@ const Transaction = () => {
                     </div>
                     ${imageUrl ? `
                         <div class="mt-4 rounded-xl overflow-hidden border shadow-inner bg-gray-50">
-                            <p class="text-[9px] font-black text-gray-300 p-2 uppercase tracking-widest text-center">หลักฐานสลิป</p>
+                            <p class="text-[9px] font-black text-gray-300 p-2 uppercase tracking-widest text-center">หลักฐาน</p>
                             <img src="${imageUrl}" class="w-full h-auto max-h-[300px] object-contain cursor-zoom-in" onclick="window.open('${imageUrl}', '_blank')" />
                         </div>
                     ` : ''}
@@ -351,7 +351,6 @@ const Transaction = () => {
                         <input 
                             type="file" 
                             accept="image/*,.heic" 
-                            capture="environment" 
                             className="hidden" 
                             onChange={handleImageChange} 
                         />
