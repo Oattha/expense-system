@@ -7,10 +7,11 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      // --- ส่วนที่เพิ่มเข้ามาเพื่อแก้ปัญหาไฟล์เกิน 2MB ---
+      registerType: 'prompt', // เปลี่ยนเป็น prompt เพื่อให้ระบบเด้งถาม User ก่อนอัปเดต
+      // --- ส่วนที่เพิ่มเข้ามาเพื่อแก้ปัญหาไฟล์เกิน 2MB และจัดการแคชเก่า ---
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // ขยายลิมิตเป็น 5MB
+        cleanupOutdatedCaches: true, // บังคับล้างแคชเวอร์ชันเก่าทิ้งเสมอ
       },
       // ----------------------------------------
       manifest: {
