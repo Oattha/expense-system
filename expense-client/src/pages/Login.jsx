@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../api/axios'; 
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Loader2, Coffee } from 'lucide-react'; // เพิ่ม Coffee เข้ามาให้ดูชิลล์
+import { LogIn, Loader2, Coffee, MonitorSmartphone } from 'lucide-react'; 
 
 const Login = () => {
     const [form, setForm] = useState({ username: '', password: '' });
@@ -43,13 +43,20 @@ const Login = () => {
                 )}
 
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                    {/* --- แก้ไขส่วนนี้: กลับมาใช้กรอบสี่เหลี่ยมแบบเดิม แต่เปลี่ยนไอคอนข้างใน --- */}
+                    <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200 overflow-hidden">
                         {isLoading ? (
                             <Coffee className="text-white animate-bounce" size={32} />
                         ) : (
-                            <LogIn className="text-white" size={32} />
+                            <img 
+                                src="/icon-192x192.png" 
+                                alt="App Logo" 
+                                className="w-full h-full object-contain p-1.5" 
+                            />
                         )}
                     </div>
+                    {/* ------------------------------------------------------------------ */}
+                    
                     <h2 className="text-2xl font-black text-gray-800 tracking-tighter">EXPENSE TRACKER</h2>
                     <p className="text-gray-400 text-sm font-medium">
                         {isLoading ? 'รอแป๊บน้า กำลังวอร์มเครื่อง...' : 'ยินดีต้อนรับครับพี่ชาย'}
@@ -98,7 +105,6 @@ const Login = () => {
                             )}
                         </button>
                         
-                        {/* ข้อความตลกๆ ที่จะโผล่มาตอนโหลด */}
                         {isLoading && (
                             <p className="text-[10px] text-center text-indigo-400 mt-2 font-bold animate-pulse">
                                 * เว็บเราราคาประหยัด เซิร์ฟเวอร์เลยรอนานนิดนึงพี่ 😅
@@ -109,6 +115,18 @@ const Login = () => {
                     <p className="text-center text-sm text-gray-400 mt-4">
                         ยังไม่มีบัญชี? <button type="button" disabled={isLoading} onClick={() => navigate('/register')} className="text-indigo-600 font-bold disabled:text-indigo-300">สมัครสมาชิกที่นี่</button>
                     </p>
+
+                    {/* --- ปุ่มวิธีติดตั้งเว็บเป็นแอป (Install Guide) --- */}
+                    <div className="text-center mt-6 border-t border-gray-50 pt-4">
+                        <button 
+                            type="button" 
+                            onClick={() => navigate('/install-guide')} 
+                            className="text-[10px] font-bold text-indigo-500 bg-indigo-50/50 px-4 py-2 rounded-full border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 mx-auto"
+                        >
+                            <MonitorSmartphone size={14} /> 
+                            วิธีติดตั้งเว็บให้เป็นแอปบนมือถือ
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

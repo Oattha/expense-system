@@ -9,6 +9,8 @@ import Transaction from '../pages/Transaction';
 import Report from '../pages/Report';
 import Profile from '../pages/Profile';
 import AdminFrames from '../pages/AdminFrames';
+import InstallGuide from '../pages/InstallGuide';
+
 
 const PrivateRoute = ({ children }) => {
     const { token } = useAuth();
@@ -21,6 +23,7 @@ const AppRoutes = () => {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/install-guide" element={<InstallGuide />} />
 
             {/* Protected Routes (ต้อง Login ก่อน) */}
             <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
