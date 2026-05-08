@@ -12,9 +12,10 @@ const Dashboard = () => {
     const [transactions, setTransactions] = useState([]);
     const [showAccounts, setShowAccounts] = useState(false);
     
-    // --- ระบบ MJ Overlay & Sound ---[cite: 2]
+    // --- ระบบ MJ Overlay & Sound ---
     const [showMJOverlay, setShowMJOverlay] = useState(false);
-    const audioRef = useRef(new Audio('/billie-jean-intro.mp3')); // เรียกไฟล์จาก public[cite: 2]
+    // แก้ไข 1: สร้าง Audio เปล่าๆ ไว้ก่อน ยังไม่ใส่ไฟล์เสียง เพื่อไม่ให้มือถือจองคิว Media Player
+    const audioRef = useRef(new Audio()); 
 
     const currentYear = new Date().getFullYear();
     const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -37,24 +38,30 @@ const Dashboard = () => {
     
     const navigate = useNavigate();
 
-    // จัดการการเล่นเพลงเมื่อ Overlay เปิด/ปิด[cite: 2]
+    // --- แก้ไข 2: จัดการการเล่นเพลงและทำลาย Media Player ---
     useEffect(() => {
         const audio = audioRef.current;
         if (showMJOverlay) {
-            audio.loop = true; // วนลูปท่อนอินโทร[cite: 2]
+            audio.src = '/billie-jean-intro.mp3'; // โหลดไฟล์เข้าไปเฉพาะตอนจะเล่น
+            audio.loop = true; 
             audio.currentTime = 0;
             audio.play().catch(err => console.log("Playback interaction required"));
         } else {
             audio.pause();
+            audio.removeAttribute('src'); // เตะไฟล์เสียงทิ้ง เพื่อให้มือถือลบแถบแจ้งเตือนออก
+            audio.load(); // บังคับรีเซ็ตสถานะ Audio
         }
-        return () => audio.pause();
+        
+        return () => {
+            audio.pause();
+            audio.removeAttribute('src');
+        };
     }, [showMJOverlay]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const currentActualYear = new Date().getFullYear();
-                /* ปรับปรุง: ใช้ api instance ที่ดึง URL จาก .env พอร์ต 5000 อัตโนมัติ[cite: 4, 5] */
                 const [summaryRes, accountsRes, transRes, profileRes, statsRes, currentMonthRes] = await Promise.all([
                     api.get(`/summary?year=${selectedYear}`),
                     api.get('/accounts'),
@@ -71,7 +78,7 @@ const Dashboard = () => {
                 
                 if (profileRes.data) {
                     setBudget(Number(profileRes.data.monthly_budget) || 0); 
-                    setBudgetUpdateCount(profileRes.data.budget_update_count || 0); // ดึงค่าจริงจาก DB
+                    setBudgetUpdateCount(profileRes.data.budget_update_count || 0); 
                 }
 
                 if (selectedMonth === currentMonth && budget > 0 && currentMonthRes.data.expense > budget) {
@@ -92,15 +99,13 @@ const Dashboard = () => {
     const budgetUsagePercent = budget > 0 ? Math.min((monthlySummary.expense / budget) * 100, 100) : 0;
 
     const handleUpdateBudget = async () => {
-        // เช็คเงื่อนไขจากค่าจริงที่ได้จาก Backend
         if (budgetUpdateCount >= 2) {
-            setShowMJOverlay(true); // เปิดรูป MJ และเพลงทันที[cite: 2]
+            setShowMJOverlay(true); 
             setIsEditingBudget(false);
             return;
         }
 
         try {
-            /* ปรับปรุง: ยิงไปที่ Backend พอร์ต 5000 ผ่าน Interceptor[cite: 4, 5] */
             const res = await api.put('/user/budget', { budget: Number(tempBudget) });
             setBudget(Number(tempBudget));
             setBudgetUpdateCount(res.data.count); 
@@ -117,7 +122,7 @@ const Dashboard = () => {
         } catch (err) {
             const errorMsg = err.response?.data?.error || "บันทึกเป้าหมายไม่สำเร็จ";
             if (err.response?.status === 403) {
-                setShowMJOverlay(true); // ท่อนฮุคมาเลยพี่ชาย![cite: 2]
+                setShowMJOverlay(true); 
             } else {
                 Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: errorMsg });
             }
@@ -132,7 +137,7 @@ const Dashboard = () => {
     return (
         <div className="min-h-screen bg-[#FDFDFD] pb-24 text-[#444] font-kanit relative">
             
-            {/* --- Billie Jean MJ Overlay Zone ---[cite: 2] */}
+            {/* --- Billie Jean MJ Overlay Zone --- */}
             {showMJOverlay && (
                 <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-500">
                     <button onClick={() => setShowMJOverlay(false)} className="absolute top-10 right-6 text-white/30 hover:text-white transition-colors"><X size={32}/></button>
