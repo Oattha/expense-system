@@ -1,21 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa' // เพิ่มบรรทัดนี้: เรียกใช้ Plugin PWA
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    // เพิ่มตั้งค่า VitePWA ต่อท้าย react()
     VitePWA({
-      registerType: 'autoUpdate', // อัปเดตแอปอัตโนมัติเมื่อมีเวอร์ชันใหม่
+      registerType: 'autoUpdate',
+      // --- ส่วนที่เพิ่มเข้ามาเพื่อแก้ปัญหาไฟล์เกิน 2MB ---
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // ขยายลิมิตเป็น 5MB
+      },
+      // ----------------------------------------
       manifest: {
-        name: 'Expense Tracker', // ชื่อเต็มตอนติดตั้ง
-        short_name: 'ExpenseApp', // ชื่อสั้นใต้ไอคอน
+        name: 'Expense Tracker',
+        short_name: 'ExpenseApp',
         description: 'แอปจัดการรายรับรายจ่ายของคุณ',
-        theme_color: '#4f46e5', // สีธีม (Indigo-600)
-        background_color: '#FDFDFD', // สีพื้นหลัง
-        display: 'standalone', // ทำให้ซ่อนแถบเบราว์เซอร์ ดูเป็นแอปจริง
+        theme_color: '#4f46e5',
+        background_color: '#FDFDFD',
+        display: 'standalone',
         icons: [
           {
             src: '/icon-192x192.png',
