@@ -23,7 +23,7 @@ func main() {
 
 	app.Use(cors.New(cors.Config{
 		// ถ้าดีพลอยหน้าบ้านแล้ว อย่าลืมเปลี่ยนจาก localhost เป็น URL จริงนะครับ[cite: 4]
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins: "https://expense-system-1-zp46.onrender.com",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE",
 	}))
