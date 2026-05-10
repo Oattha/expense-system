@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import api from '../api/axios'; // แก้ไข: เรียกใช้ api instance ที่รองรับ VITE_API_URL
+import api from '../api/axios'; 
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Tag, PlusCircle, Wallet, Landmark, Check, Calendar, MessageSquare, Filter, X, Download, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Tag, PlusCircle, Wallet, Landmark, Check, Calendar, MessageSquare, Filter, X, Download, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression'; 
 import heic2any from 'heic2any'; 
@@ -26,6 +26,14 @@ const Transaction = () => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
 
+    // --- เลื่อน State เหล่านี้ขึ้นมาไว้ด้านบน เพื่อป้องกัน Error ก่อนเรียกใช้ ---
+    const [filterCategory, setFilterCategory] = useState('');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    
+    // --- State สำหรับระบบแบ่งหน้า (Pagination) ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10; // กำหนดให้โชว์หน้าละ 10 รายการ
+
     const [form, setForm] = useState({ 
         account_id: '', 
         amount: '', 
@@ -43,9 +51,13 @@ const Transaction = () => {
         }
     }, []);
 
+    // รีเซ็ตหน้ากลับไปหน้า 1 เสมอเวลาเปลี่ยนเดือน หรือเปลี่ยนตัวกรอง
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedMonth, filterCategory]);
+
     const fetchData = async () => {
         try {
-            // ปรับปรุง: ใช้ api instance ยิงไปที่พอร์ต 5000 ตาม .env อัตโนมัติ
             const [accRes, transRes, catRes] = await Promise.all([
                 api.get('/accounts'),
                 api.get('/transactions'),
@@ -60,7 +72,6 @@ const Transaction = () => {
     };
 
     const showDetail = (item) => {
-        /* แก้ไข: เปลี่ยนจากดึงผ่าน localhost/uploads มาใช้ URL จาก Cloudinary ที่เก็บใน DB โดยตรง */
         const imageUrl = item.image || null; 
         const account = accounts.find(a => a.id === item.account_id);
         
@@ -141,15 +152,21 @@ const Transaction = () => {
         return [...cats].sort((a, b) => (counts[b.name] || 0) - (counts[a.name] || 0));
     };
 
-    const [filterCategory, setFilterCategory] = useState('');
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-
+    // กรองประวัติตามเดือนและหมวดหมู่
     const filteredHistory = history.filter(item => {
         const itemMonth = new Date(item.date).toISOString().slice(0, 7);
         const matchMonth = itemMonth === selectedMonth;
         const matchCategory = filterCategory === '' || item.category === filterCategory;
         return matchMonth && matchCategory;
     });
+
+    // --- คำนวณข้อมูลสำหรับระบบแบ่งหน้า (Pagination) ---
+    // 1. เรียงลำดับจากใหม่สุดไปเก่าสุด
+    const sortedFilteredHistory = [...filteredHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+    // 2. คำนวณจำนวนหน้าทั้งหมด
+    const totalPages = Math.ceil(sortedFilteredHistory.length / itemsPerPage);
+    // 3. ตัด Array เอาเฉพาะรายการของหน้าปัจจุบัน
+    const currentItems = sortedFilteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -200,7 +217,6 @@ const Transaction = () => {
         }
 
         try {
-            /* ปรับปรุง: ยิงไปที่ Backend ผ่าน Interceptor */
             await api.post('/transactions', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' } 
             });
@@ -221,6 +237,7 @@ const Transaction = () => {
             setTransactionDate(getLocalDatetime());
             setSelectedImage(null);
             setPreviewUrl(null);
+            setCurrentPage(1); // พอบันทึกเสร็จ ให้เด้งกลับมาหน้าแรกเพื่อดูรายการล่าสุด
 
         } catch (err) { 
             Swal.fire({
@@ -238,7 +255,6 @@ const Transaction = () => {
     const handleAddCategory = async () => {
         if (!newCatName) return;
         try {
-            // ปรับปรุง: ใช้ api instance
             const res = await api.post('/categories', { name: newCatName, type: form.type });
             setCategories([...categories, res.data]);
             setNewCatName('');
@@ -256,6 +272,7 @@ const Transaction = () => {
             alert("ไม่มีข้อมูลที่จะ Export ครับพี่ชาย");
             return;
         }
+        // คำนวณจาก filteredHistory ทั้งหมด ไม่ใช่แค่ currentItems ในหน้าปัจจุบัน
         const sortedForCalc = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
         let runningBalance = 0;
         const exportData = sortedForCalc.map(item => {
@@ -297,7 +314,6 @@ const Transaction = () => {
                 <div className="w-6"></div>
             </div>
 
-            {/* --- ส่วนที่แก้ไข: ดักจับกรณีไม่มีบัญชีให้โชว์คำเตือนแทนฟอร์ม --- */}
             {accounts.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4">
                     <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-2 shadow-inner">
@@ -319,7 +335,6 @@ const Transaction = () => {
                     </button>
                 </div>
             ) : (
-                /* --- ถ้ามีบัญชีแล้ว ก็โชว์ฟอร์มและ History ตามปกติ --- */
                 <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-3 overflow-y-auto pb-24 font-kanit">
                     
                     <div className="flex bg-gray-100 p-0.5 rounded-lg gap-0.5">
@@ -428,7 +443,8 @@ const Transaction = () => {
                         </div>
 
                         <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden shadow-sm">
-                            {filteredHistory.length > 0 ? filteredHistory.map((item) => {
+                            {/* --- เรียกใช้ currentItems สำหรับแสดงผลเฉพาะหน้าปัจจุบัน --- */}
+                            {currentItems.length > 0 ? currentItems.map((item) => {
                                 const account = accounts.find(a => a.id === item.account_id);
                                 return (
                                     <div key={item.id} onClick={() => showDetail(item)} className="p-3 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer active:bg-indigo-50/30">
@@ -453,6 +469,33 @@ const Transaction = () => {
                                     </div>
                                 );
                             }) : ( <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase tracking-widest">ไม่มีข้อมูล</div> )}
+
+                            {/* --- ปุ่มเปลี่ยนหน้า (Pagination UI) จะโชว์ก็ต่อเมื่อมีมากกว่า 1 หน้า --- */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-between items-center p-3 border-t border-gray-100 bg-gray-50/50">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${currentPage === 1 ? 'text-gray-300 bg-gray-100 cursor-not-allowed' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 active:scale-95 shadow-sm'}`}
+                                    >
+                                        <ChevronLeft size={14} /> ก่อนหน้า
+                                    </button>
+                                    
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                        หน้า {currentPage} / {totalPages}
+                                    </span>
+
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${currentPage === totalPages ? 'text-gray-300 bg-gray-100 cursor-not-allowed' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100 active:scale-95 shadow-sm'}`}
+                                    >
+                                        ถัดไป <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </form>
