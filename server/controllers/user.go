@@ -190,3 +190,58 @@ func CreateAvatarFrame(c *fiber.Ctx) error {
 
 	return c.Status(201).JSON(frame)
 }
+
+// UpdateCycleDate อัปเดตวันที่ตัดรอบบิล (1-28 หรือ 31 สำหรับวันสิ้นเดือน)
+func UpdateCycleDate(c *fiber.Ctx) error {
+	uID := c.Locals("user_id").(uint)
+	var data struct {
+		CycleDate int `json:"cycle_date"`
+	}
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "ข้อมูลไม่ถูกต้อง"})
+	}
+
+	// บังคับรับแค่ 1-28 หรือ 31
+	if (data.CycleDate < 1 || data.CycleDate > 28) && data.CycleDate != 31 {
+		return c.Status(400).JSON(fiber.Map{"error": "กรุณาเลือกวันที่ 1-28 หรือ 31 (วันสิ้นเดือน)"})
+	}
+
+	var user models.User
+	if err := common.DB.First(&user, uID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "ไม่พบข้อมูลผู้ใช้งาน"})
+	}
+
+	currentMonth := int(time.Now().Month())
+
+	// รีเซ็ตโควต้าถ้าขึ้นเดือนใหม่
+	if user.LastCycleUpdateMonth != currentMonth {
+		user.CycleUpdateCount = 0
+		user.LastCycleUpdateMonth = currentMonth
+	}
+
+	// เช็คโควต้า 2 ครั้ง
+	if user.CycleUpdateCount >= 2 {
+		return c.Status(403).JSON(fiber.Map{
+			"error": "คุณแก้ไขวันตัดรอบครบ 2 ครั้งในเดือนนี้แล้ว โปรดรอเดือนถัดไปครับ",
+		})
+	}
+
+	user.CycleDate = data.CycleDate
+	user.CycleUpdateCount += 1
+
+	if err := common.DB.Save(&user).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "ไม่สามารถบันทึกข้อมูลได้"})
+	}
+
+	// ล้างแคช Summary ใน Redis เพราะวันตัดรอบเปลี่ยน ยอดรวมต้องคำนวณใหม่
+	keys, _ := common.Rdb.Keys(common.Ctx, fmt.Sprintf("summary:%d:*", uID)).Result()
+	for _, key := range keys {
+		common.Rdb.Del(common.Ctx, key)
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "บันทึกวันตัดรอบสำเร็จ",
+		"count":   user.CycleUpdateCount,
+		"cycle_date": user.CycleDate,
+	})
+}

@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Oattha/expense-app/common"
@@ -19,15 +20,18 @@ import (
 func GetSummary(c *fiber.Ctx) error {
 	uID := c.Locals("user_id").(uint)
 	
-	// รับค่าจาก Query Parameter
 	year := c.Query("year", fmt.Sprintf("%d", time.Now().Year()))
 	month := c.Query("month")
-	period := c.Query("period") // ระบุว่าเป็นรายวัน/เดือน/ปี
+	period := c.Query("period") 
 	
-	// ปรับ key ของ Redis ให้ครอบคลุม Filter เพื่อป้องกันข้อมูลปนกัน
-	key := fmt.Sprintf("summary:%d:%s:%s:%s", uID, year, month, period)
+	// ดึงค่า CycleDate ของ User คนนี้มาก่อน
+	var user models.User
+	common.DB.Select("cycle_date").First(&user, uID)
+	cycleDate := user.CycleDate
+	if cycleDate == 0 { cycleDate = 1 } // กันเหนียว ค่าเริ่มต้นคือ 1
 
-	// เช็ค Cache ใน Redis
+	key := fmt.Sprintf("summary:%d:%s:%s:%s:cycle:%d", uID, year, month, period, cycleDate)
+
 	val, err := common.Rdb.Get(common.Ctx, key).Result()
 	if err == nil {
 		return c.SendString(val)
@@ -39,38 +43,45 @@ func GetSummary(c *fiber.Ctx) error {
 		Balance float64 `json:"balance"`
 	}
 
-	// สร้าง Base Query สำหรับรายรับและรายจ่าย โดยล็อกปีไว้เป็นพื้นฐาน
-	queryIncome := common.DB.Model(&models.Transaction{}).
-		Where("user_id = ? AND type = ? AND EXTRACT(YEAR FROM date) = ?", uID, "income", year)
-	
-	queryExpense := common.DB.Model(&models.Transaction{}).
-		Where("user_id = ? AND type = ? AND EXTRACT(YEAR FROM date) = ?", uID, "expense", year)
+	// --- แก้ไขใหญ่: ลบการบังคับล็อค EXTRACT(YEAR) ออก เพื่อให้ข้ามปีได้ เช่น 25 ธ.ค. - 24 ม.ค. ---
+	queryIncome := common.DB.Model(&models.Transaction{}).Where("user_id = ? AND type = ?", uID, "income")
+	queryExpense := common.DB.Model(&models.Transaction{}).Where("user_id = ? AND type = ?", uID, "expense")
 
-	// Logic การกรองเพิ่มเติม
+	// Logic การคำนวณแกนเวลา
 	if period == "day" {
-		// ถ้าเลือกเป็นรายวัน ให้กรองเฉพาะวันนี้จริงๆ
 		queryIncome = queryIncome.Where("DATE(date) = CURRENT_DATE")
 		queryExpense = queryExpense.Where("DATE(date) = CURRENT_DATE")
 	} else if month != "" {
-		// ถ้าเลือกเป็นเดือนใดเดือนหนึ่ง (month ไม่ว่าง) ให้กรองตามเดือนนั้น
-		queryIncome = queryIncome.Where("EXTRACT(MONTH FROM date) = ?", month)
-		queryExpense = queryExpense.Where("EXTRACT(MONTH FROM date) = ?", month)
+		m, _ := strconv.Atoi(month)
+		y, _ := strconv.Atoi(year)
+		var startDate, endDate time.Time
+
+		if cycleDate == 31 || cycleDate == 1 {
+			// กรณี: ปฏิทินปกติ (วันที่ 1 ถึง วันสิ้นเดือน)
+			startDate = time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.Local)
+			endDate = startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		} else {
+			// กรณี: ตัดรอบวันอื่น (เช่น 25) -> ข้ามจากวันที่ 25 เดือนก่อน ถึง วันที่ 24 เดือนนี้
+			startDate = time.Date(y, time.Month(m-1), cycleDate, 0, 0, 0, 0, time.Local)
+			endDate = time.Date(y, time.Month(m), cycleDate, 0, 0, 0, 0, time.Local).Add(-time.Nanosecond)
+		}
+
+		queryIncome = queryIncome.Where("date BETWEEN ? AND ?", startDate, endDate)
+		queryExpense = queryExpense.Where("date BETWEEN ? AND ?", startDate, endDate)
+	} else {
+		// กรณีดูสรุปทั้งปี 
+		queryIncome = queryIncome.Where("EXTRACT(YEAR FROM date) = ?", year)
+		queryExpense = queryExpense.Where("EXTRACT(YEAR FROM date) = ?", year)
 	}
-	// หมายเหตุ: ถ้าเลือก "ทั้งปี" หน้าบ้านจะส่ง month="" และระบบจะใช้เงื่อนไข YEAR จาก Base Query อัตโนมัติ
 
-	// 1. คำนวณรายรับรวม
 	queryIncome.Select("COALESCE(SUM(amount), 0)").Scan(&summary.Income)
-
-	// 2. คำนวณรายจ่ายรวม
 	queryExpense.Select("COALESCE(SUM(amount), 0)").Scan(&summary.Expense)
 
-	// 3. ดึงยอดเงินคงเหลือรวมจากทุกบัญชี (ยอดปัจจุบันสุทธิ)
 	common.DB.Model(&models.Account{}).
 		Where("user_id = ?", uID).
 		Select("COALESCE(SUM(balance), 0)").
 		Scan(&summary.Balance)
 
-	// เก็บค่าลง Redis 5 นาที
 	res, _ := json.Marshal(summary)
 	common.Rdb.Set(common.Ctx, key, res, 5*time.Minute)
 

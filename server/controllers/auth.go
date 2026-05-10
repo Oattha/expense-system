@@ -84,5 +84,8 @@ func GetProfile(c *fiber.Ctx) error {
 		"avatar_update_count":      user.AvatarUpdateCount,
 		"last_avatar_update_month": user.LastAvatarUpdateMonth,
 		"last_avatar_update_year":  user.LastAvatarUpdateYear,
+		"cycle_date":              user.CycleDate,
+		"cycle_update_count":      user.CycleUpdateCount,
+		"last_cycle_update_month": user.LastCycleUpdateMonth,
 	})
 }

@@ -25,6 +25,7 @@ func Setup(app *fiber.App) {
     
     p.Get("/profile", controllers.GetProfile) 
 	p.Put("/user/budget", controllers.UpdateBudget)
+    p.Put("/user/cycle", controllers.UpdateCycleDate)
     // ในกลุ่ม Protected (p)
     p.Get("/stats/annual", controllers.GetAnnualStats)
 

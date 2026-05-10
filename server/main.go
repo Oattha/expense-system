@@ -22,11 +22,11 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		// ถ้าดีพลอยหน้าบ้านแล้ว อย่าลืมเปลี่ยนจาก localhost เป็น URL จริงนะครับ[cite: 4]
-		AllowOrigins: "https://expense-system-1-zp46.onrender.com",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PUT, DELETE",
-	}))
+        // เติม http:// หน้า localhost และเพิ่มพอร์ต 5173 ของหน้าบ้าน (Vite) เข้าไปด้วยครับ
+        AllowOrigins: "http://localhost:5000, http://localhost:5173, https://expense-system-1-zp46.onrender.com",
+        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+        AllowMethods: "GET, POST, PUT, DELETE",
+    }))
 
 	app.Get("/expense/swagger-document/*", swagger.HandlerDefault)
 

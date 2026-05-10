@@ -19,6 +19,10 @@ type User struct {
 	AvatarUpdateCount     int       `json:"avatar_update_count"`      // นับจำนวนครั้งที่เปลี่ยนรูป
 	LastAvatarUpdateMonth int       `json:"last_avatar_update_month"` // เก็บเดือนที่เปลี่ยนรูปล่าสุด
 	LastAvatarUpdateYear  int       `json:"last_avatar_update_year"`  // เก็บปีที่เปลี่ยนรูปล่าสุด
+
+	CycleDate             int       `gorm:"default:1" json:"cycle_date"` // เก็บวันที่ 1-28 (ถ้าส่งมา 31 คือให้ใช้วันสิ้นเดือน)
+	CycleUpdateCount      int       `json:"cycle_update_count"`          // นับโควต้าแก้ 2 ครั้ง
+	LastCycleUpdateMonth  int       `json:"last_cycle_update_month"`     // รีเซ็ตโควต้ารายเดือน
 }
 
 type UpdateDefaultReq struct {
