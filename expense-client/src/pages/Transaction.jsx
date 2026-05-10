@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../api/axios'; // แก้ไข: เรียกใช้ api instance ที่รองรับ VITE_API_URL[cite: 4, 5]
+import api from '../api/axios'; // แก้ไข: เรียกใช้ api instance ที่รองรับ VITE_API_URL
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Tag, PlusCircle, Wallet, Landmark, Check, Calendar, MessageSquare, Filter, X, Download, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -200,7 +200,7 @@ const Transaction = () => {
         }
 
         try {
-            /* ปรับปรุง: ยิงไปที่ Backend ผ่าน Interceptor[cite: 4, 5] */
+            /* ปรับปรุง: ยิงไปที่ Backend ผ่าน Interceptor */
             await api.post('/transactions', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' } 
             });
@@ -297,142 +297,166 @@ const Transaction = () => {
                 <div className="w-6"></div>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-3 overflow-y-auto pb-24 font-kanit">
-                
-                <div className="flex bg-gray-100 p-0.5 rounded-lg gap-0.5">
-                    <button type="button" onClick={() => setForm({...form, type: 'expense', category: '', note: ''})}
-                        className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'expense' ? 'bg-red-500 text-white shadow-sm border-2 border-red-600 scale-[1.01]' : 'text-gray-400'}`}>
-                        รายจ่าย
-                    </button>
-                    <button type="button" onClick={() => setForm({...form, type: 'income', category: '', note: ''})}
-                        className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'income' ? 'bg-green-50 text-white shadow-sm border-2 border-green-600 scale-[1.01]' : 'text-gray-400'}`}>
-                        รายรับ
-                    </button>
-                </div>
-
-                <div className="bg-white px-4 py-4 rounded-xl border border-gray-100 shadow-sm text-center">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">จำนวนเงิน</p>
-                    <div className={`flex items-center justify-center border-b pb-1 transition-colors ${form.type === 'expense' ? 'border-red-100 focus-within:border-red-500' : 'border-green-100 focus-within:border-green-500'}`}>
-                        <span className={`text-xl font-black mr-2 ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>฿</span>
-                        <input type="number" placeholder="0.00" className={`text-3xl font-black w-full max-w-[160px] text-center bg-transparent outline-none ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`} onChange={e => setForm({...form, amount: e.target.value})} value={form.amount} required />
+            {/* --- ส่วนที่แก้ไข: ดักจับกรณีไม่มีบัญชีให้โชว์คำเตือนแทนฟอร์ม --- */}
+            {accounts.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4">
+                    <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-2 shadow-inner">
+                        <Wallet size={40} />
                     </div>
+                    <div>
+                        <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">ยังไม่มีบัญชีเลยพี่!</h2>
+                        <p className="text-sm font-medium text-gray-500 mt-2 leading-relaxed">
+                            ระบบไม่รู้จะเอาเงินไปเก็บไว้หรือหักออกจากกระเป๋าไหนครับ<br/>
+                            รบกวนพี่ไปสร้างบัญชีกระเป๋าตังค์ใบแรกก่อนนะ
+                        </p>
+                    </div>
+                    <button 
+                        onClick={() => navigate('/account')} 
+                        className="mt-4 bg-indigo-600 text-white px-8 py-3.5 rounded-full font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/30 active:scale-95 transition-all flex items-center gap-2"
+                    >
+                        <PlusCircle size={16} /> 
+                        ไปสร้างบัญชีกันเลย
+                    </button>
                 </div>
+            ) : (
+                /* --- ถ้ามีบัญชีแล้ว ก็โชว์ฟอร์มและ History ตามปกติ --- */
+                <form onSubmit={handleSubmit} className="flex-1 p-4 space-y-3 overflow-y-auto pb-24 font-kanit">
+                    
+                    <div className="flex bg-gray-100 p-0.5 rounded-lg gap-0.5">
+                        <button type="button" onClick={() => setForm({...form, type: 'expense', category: '', note: ''})}
+                            className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'expense' ? 'bg-red-500 text-white shadow-sm border-2 border-red-600 scale-[1.01]' : 'text-gray-400'}`}>
+                            รายจ่าย
+                        </button>
+                        <button type="button" onClick={() => setForm({...form, type: 'income', category: '', note: ''})}
+                            className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'income' ? 'bg-green-50 text-white shadow-sm border-2 border-green-600 scale-[1.01]' : 'text-gray-400'}`}>
+                            รายรับ
+                        </button>
+                    </div>
 
-                <div className="space-y-1">
+                    <div className="bg-white px-4 py-4 rounded-xl border border-gray-100 shadow-sm text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">จำนวนเงิน</p>
+                        <div className={`flex items-center justify-center border-b pb-1 transition-colors ${form.type === 'expense' ? 'border-red-100 focus-within:border-red-500' : 'border-green-100 focus-within:border-green-500'}`}>
+                            <span className={`text-xl font-black mr-2 ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>฿</span>
+                            <input type="number" placeholder="0.00" className={`text-3xl font-black w-full max-w-[160px] text-center bg-transparent outline-none ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`} onChange={e => setForm({...form, amount: e.target.value})} value={form.amount} required />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                            <div className="flex-shrink-0 flex items-center gap-1.5 bg-gray-50 border border-dashed border-gray-300 rounded-lg px-2.5 py-1.5">
+                                <input type="text" placeholder="เพิ่ม..." className="bg-transparent text-[10px] outline-none w-10 font-bold" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
+                                <button type="button" onClick={handleAddCategory} className="text-indigo-600"><PlusCircle size={12} /></button>
+                            </div>
+                            {getSortedCategories(categories.filter(c => c.type === form.type)).map(cat => (
+                                <button key={cat.id} type="button" onClick={() => toggleCategory(cat.name)} 
+                                    className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${form.category === cat.name ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-100 bg-white text-gray-500'}`}>
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2 bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
+                            <MessageSquare size={14} className="text-gray-300" />
+                            <input type="text" placeholder="บันทึก..." className="flex-1 bg-transparent border-none text-[11px] font-medium outline-none text-gray-600" onChange={e => setForm({...form, note: e.target.value})} value={form.note} />
+                        </div>
+                        <div className="flex items-center gap-2 bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
+                            <Calendar size={14} className="text-gray-300" />
+                            <input type="datetime-local" className="flex-1 bg-transparent border-none text-[11px] font-bold outline-none text-gray-600" value={transactionDate} onChange={(e) => setTransactionDate(e.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <label className="flex-1 flex items-center justify-center gap-2 border border-dashed border-gray-300 p-2 rounded-lg hover:bg-indigo-50 cursor-pointer text-gray-400 transition-all">
+                            <Camera size={14} />
+                            <span className="text-[10px] font-bold">ถ่ายรูป หรือ เลือกสลิป</span>
+                            <input 
+                                type="file" 
+                                accept="image/*,.heic" 
+                                className="hidden" 
+                                onChange={handleImageChange} 
+                            />
+                        </label>
+                        {previewUrl && (
+                            <div className="relative w-10 h-10 shrink-0">
+                                <img src={previewUrl} className="w-full h-full object-cover rounded-lg border border-indigo-100 shadow-sm" />
+                                <button type="button" onClick={() => {setPreviewUrl(null); setSelectedImage(null);}} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-md">
+                                    <X size={8}/>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                        <div className="flex-shrink-0 flex items-center gap-1.5 bg-gray-50 border border-dashed border-gray-300 rounded-lg px-2.5 py-1.5">
-                            <input type="text" placeholder="เพิ่ม..." className="bg-transparent text-[10px] outline-none w-10 font-bold" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
-                            <button type="button" onClick={handleAddCategory} className="text-indigo-600"><PlusCircle size={12} /></button>
-                        </div>
-                        {getSortedCategories(categories.filter(c => c.type === form.type)).map(cat => (
-                            <button key={cat.id} type="button" onClick={() => toggleCategory(cat.name)} 
-                                className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${form.category === cat.name ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-100 bg-white text-gray-500'}`}>
-                                {cat.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
-                        <MessageSquare size={14} className="text-gray-300" />
-                        <input type="text" placeholder="บันทึก..." className="flex-1 bg-transparent border-none text-[11px] font-medium outline-none text-gray-600" onChange={e => setForm({...form, note: e.target.value})} value={form.note} />
-                    </div>
-                    <div className="flex items-center gap-2 bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
-                        <Calendar size={14} className="text-gray-300" />
-                        <input type="datetime-local" className="flex-1 bg-transparent border-none text-[11px] font-bold outline-none text-gray-600" value={transactionDate} onChange={(e) => setTransactionDate(e.target.value)} />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 border border-dashed border-gray-300 p-2 rounded-lg hover:bg-indigo-50 cursor-pointer text-gray-400 transition-all">
-                        <Camera size={14} />
-                        <span className="text-[10px] font-bold">ถ่ายรูป หรือ เลือกสลิป</span>
-                        <input 
-                            type="file" 
-                            accept="image/*,.heic" 
-                            className="hidden" 
-                            onChange={handleImageChange} 
-                        />
-                    </label>
-                    {previewUrl && (
-                        <div className="relative w-10 h-10 shrink-0">
-                            <img src={previewUrl} className="w-full h-full object-cover rounded-lg border border-indigo-100 shadow-sm" />
-                            <button type="button" onClick={() => {setPreviewUrl(null); setSelectedImage(null);}} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-md">
-                                <X size={8}/>
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {accounts
-                        .filter(acc => acc.is_active) 
-                        .sort((a, b) => (a.id === Number(form.account_id) ? -1 : 1))
-                        .map(acc => (
-                            <button key={acc.id} type="button" onClick={() => setForm({...form, account_id: acc.id})}
-                                className={`flex-shrink-0 min-w-[100px] p-2 rounded-lg border text-center transition-all relative ${form.account_id === acc.id ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-100 bg-white'}`}>
-                                <div className="flex items-center justify-center gap-2">
-                                    {acc.type.toLowerCase() === 'cash' ? <Wallet size={14} className="text-orange-400"/> : <Landmark size={14} className="text-blue-400"/>}
-                                    <span className="text-[10px] font-bold truncate">{acc.name}</span>
-                                </div>
-                                {form.account_id === acc.id && (<div className="absolute top-1 right-1"><Check size={10} className="text-indigo-600 font-bold" /></div>)}
-                            </button>
-                        ))}
-                </div>
-
-                <button 
-                    type="submit" 
-                    disabled={isUploading}
-                    className={`w-full ${isUploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 active:scale-95'} text-white py-3.5 rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 uppercase tracking-wider`}
-                >
-                    {isUploading ? <Loader2 size={18} className="animate-spin" /> : <PlusCircle size={18} />}
-                    {isUploading ? 'กำลังส่งข้อมูล...' : 'บันทึกรายการลงระบบ'}
-                </button>
-
-                <div className="pt-4 border-t border-gray-100">
-                    <div className="flex justify-between items-center mb-3">
-                        <input type="month" className="text-[10px] font-bold text-gray-700 bg-gray-100 p-1.5 rounded-md outline-none border-none shadow-inner" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
-                        <div className="flex gap-2">
-                            <button onClick={handleExport} type="button" className="p-2 rounded-md border border-green-100 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm">
-                                <Download size={14} />
-                            </button>
-                            <button onClick={() => setIsFilterOpen(true)} type="button" className={`p-2 rounded-md border transition-all flex items-center gap-1.5 shadow-sm ${filterCategory ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-400'}`}>
-                                <Filter size={14} />
-                                {filterCategory && <span className="text-[10px] font-bold uppercase">{filterCategory}</span>}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden shadow-sm">
-                        {filteredHistory.length > 0 ? filteredHistory.map((item) => {
-                            const account = accounts.find(a => a.id === item.account_id);
-                            return (
-                                <div key={item.id} onClick={() => showDetail(item)} className="p-3 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer active:bg-indigo-50/30">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-1 h-1 rounded-full ${item.type === 'expense' ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <p className="font-bold text-gray-800 text-xs leading-none uppercase">{item.category || 'ทั่วไป'}</p>
-                                                {item.image && <ImageIcon size={10} className="text-indigo-400 animate-pulse" />}
-                                            </div>
-                                            <div className="flex items-center gap-1 mt-0.5 opacity-70">
-                                                {account?.type.toLowerCase() === 'cash' ? <Wallet size={8} className="text-orange-400" /> : <Landmark size={8} className="text-blue-400" />}
-                                                <span className="text-[8px] font-black text-gray-500 uppercase">{account?.name || '-'}</span>
-                                            </div>
-                                            {item.note && <p className="text-[9px] text-gray-500 font-medium truncate max-w-[150px] mt-0.5">{item.note}</p>}
-                                            <p className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} น.</p>
-                                        </div>
+                        {accounts
+                            .filter(acc => acc.is_active) 
+                            .sort((a, b) => (a.id === Number(form.account_id) ? -1 : 1))
+                            .map(acc => (
+                                <button key={acc.id} type="button" onClick={() => setForm({...form, account_id: acc.id})}
+                                    className={`flex-shrink-0 min-w-[100px] p-2 rounded-lg border text-center transition-all relative ${form.account_id === acc.id ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-100 bg-white'}`}>
+                                    <div className="flex items-center justify-center gap-2">
+                                        {acc.type.toLowerCase() === 'cash' ? <Wallet size={14} className="text-orange-400"/> : <Landmark size={14} className="text-blue-400"/>}
+                                        <span className="text-[10px] font-bold truncate">{acc.name}</span>
                                     </div>
-                                    <span className={`font-bold text-xs ${item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
-                                        {item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}
-                                    </span>
-                                </div>
-                            );
-                        }) : ( <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase tracking-widest">ไม่มีข้อมูล</div> )}
+                                    {form.account_id === acc.id && (<div className="absolute top-1 right-1"><Check size={10} className="text-indigo-600 font-bold" /></div>)}
+                                </button>
+                            ))}
                     </div>
-                </div>
-            </form>
+
+                    <button 
+                        type="submit" 
+                        disabled={isUploading}
+                        className={`w-full ${isUploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 active:scale-95'} text-white py-3.5 rounded-lg font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 uppercase tracking-wider`}
+                    >
+                        {isUploading ? <Loader2 size={18} className="animate-spin" /> : <PlusCircle size={18} />}
+                        {isUploading ? 'กำลังส่งข้อมูล...' : 'บันทึกรายการลงระบบ'}
+                    </button>
+
+                    <div className="pt-4 border-t border-gray-100">
+                        <div className="flex justify-between items-center mb-3">
+                            <input type="month" className="text-[10px] font-bold text-gray-700 bg-gray-100 p-1.5 rounded-md outline-none border-none shadow-inner" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                            <div className="flex gap-2">
+                                <button onClick={handleExport} type="button" className="p-2 rounded-md border border-green-100 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm">
+                                    <Download size={14} />
+                                </button>
+                                <button onClick={() => setIsFilterOpen(true)} type="button" className={`p-2 rounded-md border transition-all flex items-center gap-1.5 shadow-sm ${filterCategory ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-400'}`}>
+                                    <Filter size={14} />
+                                    {filterCategory && <span className="text-[10px] font-bold uppercase">{filterCategory}</span>}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden shadow-sm">
+                            {filteredHistory.length > 0 ? filteredHistory.map((item) => {
+                                const account = accounts.find(a => a.id === item.account_id);
+                                return (
+                                    <div key={item.id} onClick={() => showDetail(item)} className="p-3 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer active:bg-indigo-50/30">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-1 h-1 rounded-full ${item.type === 'expense' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                            <div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="font-bold text-gray-800 text-xs leading-none uppercase">{item.category || 'ทั่วไป'}</p>
+                                                    {item.image && <ImageIcon size={10} className="text-indigo-400 animate-pulse" />}
+                                                </div>
+                                                <div className="flex items-center gap-1 mt-0.5 opacity-70">
+                                                    {account?.type.toLowerCase() === 'cash' ? <Wallet size={8} className="text-orange-400" /> : <Landmark size={8} className="text-blue-400" />}
+                                                    <span className="text-[8px] font-black text-gray-500 uppercase">{account?.name || '-'}</span>
+                                                </div>
+                                                {item.note && <p className="text-[9px] text-gray-500 font-medium truncate max-w-[150px] mt-0.5">{item.note}</p>}
+                                                <p className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} น.</p>
+                                            </div>
+                                        </div>
+                                        <span className={`font-bold text-xs ${item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
+                                            {item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}
+                                        </span>
+                                    </div>
+                                );
+                            }) : ( <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase tracking-widest">ไม่มีข้อมูล</div> )}
+                        </div>
+                    </div>
+                </form>
+            )}
 
             {isFilterOpen && (
                 <>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '../api/axios';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, Landmark, Banknote, ChevronDown, ChevronUp, Clock, Plus, Target, BarChart3, CalendarDays, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, Landmark, Banknote, ChevronDown, ChevronUp, Clock, Plus, Target, BarChart3, CalendarDays, X, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Swal from 'sweetalert2'; 
@@ -12,9 +12,11 @@ const Dashboard = () => {
     const [transactions, setTransactions] = useState([]);
     const [showAccounts, setShowAccounts] = useState(false);
     
+    // --- เพิ่ม State สำหรับโหลดปุ่มรีเฟรช ---
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    
     // --- ระบบ MJ Overlay & Sound ---
     const [showMJOverlay, setShowMJOverlay] = useState(false);
-    // แก้ไข 1: สร้าง Audio เปล่าๆ ไว้ก่อน ยังไม่ใส่ไฟล์เสียง เพื่อไม่ให้มือถือจองคิว Media Player
     const audioRef = useRef(new Audio()); 
 
     const currentYear = new Date().getFullYear();
@@ -34,22 +36,28 @@ const Dashboard = () => {
     const [isEditingBudget, setIsEditingBudget] = useState(false);
     const [tempBudget, setTempBudget] = useState('');
     const [budgetUpdateCount, setBudgetUpdateCount] = useState(0); 
+    
+    // --- State สำหรับรอบตัดบัญชี ---
+    const [cycleDate, setCycleDate] = useState(1);
+    const [cycleUpdateCount, setCycleUpdateCount] = useState(0);
+    const [isEditingCycle, setIsEditingCycle] = useState(false);
+    const [tempCycleDate, setTempCycleDate] = useState(1);
+
     const [chartData, setChartData] = useState([]); 
     
     const navigate = useNavigate();
 
-    // --- แก้ไข 2: จัดการการเล่นเพลงและทำลาย Media Player ---
     useEffect(() => {
         const audio = audioRef.current;
         if (showMJOverlay) {
-            audio.src = '/billie-jean-intro.mp3'; // โหลดไฟล์เข้าไปเฉพาะตอนจะเล่น
+            audio.src = '/billie-jean-intro.mp3'; 
             audio.loop = true; 
             audio.currentTime = 0;
             audio.play().catch(err => console.log("Playback interaction required"));
         } else {
             audio.pause();
-            audio.removeAttribute('src'); // เตะไฟล์เสียงทิ้ง เพื่อให้มือถือลบแถบแจ้งเตือนออก
-            audio.load(); // บังคับรีเซ็ตสถานะ Audio
+            audio.removeAttribute('src'); 
+            audio.load(); 
         }
         
         return () => {
@@ -58,40 +66,50 @@ const Dashboard = () => {
         };
     }, [showMJOverlay]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const currentActualYear = new Date().getFullYear();
-                const [summaryRes, accountsRes, transRes, profileRes, statsRes, currentMonthRes] = await Promise.all([
-                    api.get(`/summary?year=${selectedYear}`),
-                    api.get('/accounts'),
-                    api.get(`/transactions?limit=5`), 
-                    api.get('/profile'),
-                    api.get(`/stats/annual?year=${selectedYear}`),
-                    api.get(`/summary?month=${selectedMonth}&year=${selectedYear}&period=month`)
-                ]);
+    // --- แยกฟังก์ชันดึงข้อมูลออกมา เพื่อให้ปุ่มรีเฟรชเรียกใช้ได้ ---
+    const fetchDashboardData = async () => {
+        setIsRefreshing(true); // เริ่มหมุนปุ่ม
+        try {
+            const currentActualYear = new Date().getFullYear();
+            const [summaryRes, accountsRes, transRes, profileRes, statsRes, currentMonthRes] = await Promise.all([
+                api.get(`/summary?year=${selectedYear}`),
+                api.get('/accounts'),
+                api.get(`/transactions?limit=5`), 
+                api.get('/profile'),
+                api.get(`/stats/annual?year=${selectedYear}`),
+                api.get(`/summary?month=${selectedMonth}&year=${selectedYear}&period=month`)
+            ]);
+            
+            setSummary(summaryRes.data);
+            setMonthlySummary(currentMonthRes.data); 
+            setAccounts(accountsRes.data);
+            setTransactions(transRes.data);
+            
+            if (profileRes.data) {
+                setBudget(Number(profileRes.data.monthly_budget) || 0); 
+                setBudgetUpdateCount(profileRes.data.budget_update_count || 0); 
                 
-                setSummary(summaryRes.data);
-                setMonthlySummary(currentMonthRes.data); 
-                setAccounts(accountsRes.data);
-                setTransactions(transRes.data);
-                
-                if (profileRes.data) {
-                    setBudget(Number(profileRes.data.monthly_budget) || 0); 
-                    setBudgetUpdateCount(profileRes.data.budget_update_count || 0); 
-                }
-
-                if (selectedMonth === currentMonth && budget > 0 && currentMonthRes.data.expense > budget) {
-                    Swal.fire({ icon: 'warning', title: 'เกินงบแล้วนะพี่!', confirmButtonColor: '#ef4444' });
-                }
-
-                setChartData(statsRes.data || []);
-            } catch (err) {
-                console.error('Error fetching data', err);
+                // เซ็ตค่ารอบบิลจาก API Profile
+                setCycleDate(profileRes.data.cycle_date || 1);
+                setCycleUpdateCount(profileRes.data.cycle_update_count || 0);
             }
-        };
-        fetchData();
-    }, [selectedYear, selectedMonth, budget]); 
+
+            if (selectedMonth === currentMonth && budget > 0 && currentMonthRes.data.expense > budget) {
+                Swal.fire({ icon: 'warning', title: 'เกินงบแล้วนะพี่!', confirmButtonColor: '#ef4444' });
+            }
+
+            setChartData(statsRes.data || []);
+        } catch (err) {
+            console.error('Error fetching data', err);
+        } finally {
+            setIsRefreshing(false); // หยุดหมุนปุ่ม
+        }
+    };
+
+    // ใช้ useEffect เรียกฟังก์ชันดึงข้อมูลแทนของเดิม และเพิ่ม cycleDate เพื่อให้รีเฟรชเมื่อค่าเปลี่ยน
+    useEffect(() => {
+        fetchDashboardData();
+    }, [selectedYear, selectedMonth, budget, cycleDate]); 
 
     const totalBalanceAcrossAccounts = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
     const overBudget = monthlySummary.expense > budget;
@@ -127,6 +145,39 @@ const Dashboard = () => {
                 Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: errorMsg });
             }
             setIsEditingBudget(false);
+        }
+    };
+
+    // --- ฟังก์ชันอัปเดตรอบตัดบัญชี ---
+    const handleUpdateCycle = async () => {
+        if (cycleUpdateCount >= 2) {
+            setShowMJOverlay(true); 
+            setIsEditingCycle(false);
+            return;
+        }
+        try {
+            const res = await api.put('/user/cycle', { cycle_date: Number(tempCycleDate) });
+            setCycleDate(Number(tempCycleDate));
+            setCycleUpdateCount(res.data.count); 
+            setIsEditingCycle(false);
+            
+            Swal.fire({
+                icon: 'success', 
+                title: 'สำเร็จ!', 
+                text: `ตั้งวันตัดรอบสำเร็จ (ใช้สิทธิ์ไปแล้ว ${res.data.count}/2 ครั้ง)`, 
+                showConfirmButton: false, 
+                timer: 2000, 
+                borderRadius: '20px'
+            });
+            // รีโหลดข้อมูลให้คำนวณกราฟและยอดรวมตามรอบบิลใหม่
+            fetchDashboardData();
+        } catch (err) {
+            if (err.response?.status === 403) {
+                setShowMJOverlay(true); 
+            } else {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.response?.data?.error || "ตั้งค่ารอบบิลไม่สำเร็จ" });
+            }
+            setIsEditingCycle(false);
         }
     };
 
@@ -172,19 +223,28 @@ const Dashboard = () => {
                     <p className="text-[7px] font-black text-indigo-500/50 uppercase tracking-widest leading-none">ยินดีต้อนรับ</p>
                     <h1 className="text-xs font-black text-gray-700 uppercase">สถิติการเงิน</h1>
                 </div>
+                
+                {/* --- ปุ่มรีเฟรชข้อมูล --- */}
+                <button 
+                    onClick={fetchDashboardData} 
+                    disabled={isRefreshing}
+                    className={`p-2 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 transition-all ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-100'}`}
+                >
+                    <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+                </button>
             </header>
 
             <div className="p-5 max-w-md mx-auto space-y-4">
                 
-                <div onClick={() => setShowAccounts(!showAccounts)} className="bg-indigo-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden border border-indigo-700 cursor-pointer active:scale-[0.98] transition-all">
+                <div onClick={() => setShowAccounts(!showAccounts)} className="bg-indigo-600 p-4 rounded-2xl shadow-lg text-white relative overflow-hidden border border-indigo-700 cursor-pointer active:scale-[0.98] transition-all">
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 opacity-80 mb-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider">ยอดเงินรวมทุกบัญชี</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider">ยอดเงินรวมทุกบัญชี</p>
                             {showAccounts ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         </div>
-                        <h2 className="text-3xl font-black tracking-tight">฿{totalBalanceAcrossAccounts.toLocaleString()}</h2>
+                        <h2 className="text-2xl font-black tracking-tight">฿{totalBalanceAcrossAccounts.toLocaleString()}</h2>
                     </div>
-                    <Wallet size={60} className="text-white/10 absolute -right-2 -bottom-2 rotate-12" />
+                    <Wallet size={48} className="text-white/10 absolute -right-2 -bottom-2 rotate-12" />
                 </div>
 
                 {showAccounts && (
@@ -209,62 +269,98 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-                    <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">สรุปรายการรายเดือน</h3>
-                        <div className="flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
-                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="bg-transparent text-[9px] font-black text-indigo-600 outline-none cursor-pointer appearance-none pr-1">
+                {/* --- ปรับปรุงกล่อง สรุปรายการตามรอบบิล ให้บางเฉียบ (ลด p-4 เป็น p-3, ลดช่องว่าง, ลดขนาดตัวอักษร) --- */}
+                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">สรุปรายการตามรอบบิล</h3>
+                        <div className="flex items-center gap-0.5 bg-indigo-50/50 px-1.5 py-0.5 rounded-md border border-indigo-50">
+                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="bg-transparent text-[8px] font-black text-indigo-600 outline-none cursor-pointer appearance-none pr-1">
                                 {months.map(m => (<option key={m.val} value={m.val}>{m.name}</option>))}
                             </select>
                             <ChevronDown size={8} className="text-indigo-400" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-center border-t border-gray-50 pt-3">
-                        <div onClick={() => navigate(`/report?type=income&month=${selectedMonth}`)} className="space-y-1 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-1 px-1 rounded-lg">
-                            <p className="text-[8px] font-bold text-gray-400 uppercase flex items-center justify-center gap-1">รายรับ <ArrowRight size={7} className="text-gray-300"/></p>
-                            <p className="text-xs font-black text-green-500 flex items-center justify-center gap-1"><TrendingUp size={10} /> ฿{monthlySummary.income.toLocaleString()}</p>
+                    <div className="grid grid-cols-3 gap-1 text-center border-t border-gray-50 pt-2">
+                        <div onClick={() => navigate(`/report?type=income&month=${selectedMonth}`)} className="space-y-0.5 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-0.5 px-0.5 rounded-lg">
+                            <p className="text-[7px] font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5">รายรับ <ArrowRight size={6} className="text-gray-300"/></p>
+                            <p className="text-[10px] font-black text-green-500 flex items-center justify-center gap-0.5"><TrendingUp size={8} /> ฿{monthlySummary.income.toLocaleString()}</p>
                         </div>
-                        <div onClick={() => navigate(`/report?type=expense&month=${selectedMonth}`)} className="space-y-1 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-1 px-1 rounded-lg">
-                            <p className="text-[8px] font-bold text-gray-400 uppercase flex items-center justify-center gap-1">รายจ่าย <ArrowRight size={7} className="text-gray-300"/></p>
-                            <p className="text-xs font-black text-red-500 flex items-center justify-center gap-1"><TrendingDown size={10} /> ฿{monthlySummary.expense.toLocaleString()}</p>
+                        <div onClick={() => navigate(`/report?type=expense&month=${selectedMonth}`)} className="space-y-0.5 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-0.5 px-0.5 rounded-lg">
+                            <p className="text-[7px] font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5">รายจ่าย <ArrowRight size={6} className="text-gray-300"/></p>
+                            <p className="text-[10px] font-black text-red-500 flex items-center justify-center gap-0.5"><TrendingDown size={8} /> ฿{monthlySummary.expense.toLocaleString()}</p>
                         </div>
-                        <div className="space-y-1 py-1 px-1">
-                            <p className="text-[8px] font-bold text-gray-400 uppercase">คงเหลือ</p>
-                            <p className="text-xs font-black text-indigo-600">฿{(monthlySummary.income - monthlySummary.expense).toLocaleString()}</p>
+                        <div className="space-y-0.5 py-0.5 px-0.5">
+                            <p className="text-[7px] font-bold text-gray-400 uppercase">คงเหลือ</p>
+                            <p className="text-[10px] font-black text-indigo-600">฿{(monthlySummary.income - monthlySummary.expense).toLocaleString()}</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-2">
-                            <Target size={14} className="text-indigo-500" />
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ขีดจำกัดการใช้เงินเดือนนี้(2ครั้ง)</h3>
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    
+                    {/* ส่วนที่ 1: รอบตัดบัญชี */}
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                            <CalendarDays size={12} className="text-indigo-500" />
+                            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">รอบตัดบัญชี (แก้ได้ 2 ครั้ง)</h3>
                         </div>
-                        <button onClick={() => { setIsEditingBudget(!isEditingBudget); setTempBudget(budget); }} className="text-[9px] text-indigo-500 font-black uppercase">
+                        <button onClick={() => { setIsEditingCycle(!isEditingCycle); setTempCycleDate(cycleDate); }} className="text-[8px] text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md">
+                            {isEditingCycle ? 'ยกเลิก' : 'ตั้งค่า'}
+                        </button>
+                    </div>
+
+                    {isEditingCycle ? (
+                        <div className="space-y-1 mb-3 border-b border-gray-50 pb-3">
+                            <div className="flex gap-2 items-center">
+                                <select className="flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 text-xs bg-transparent cursor-pointer" value={tempCycleDate} onChange={(e) => setTempCycleDate(Number(e.target.value))}>
+                                    {[...Array(28)].map((_, i) => (
+                                        <option key={i + 1} value={i + 1}>วันที่ {i + 1}</option>
+                                    ))}
+                                    <option value={31}>วันสิ้นเดือน</option>
+                                </select>
+                                <button onClick={handleUpdateCycle} className="bg-indigo-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">บันทึก</button>
+                            </div>
+                            <p className="text-[7px] text-gray-400 font-bold uppercase tracking-tighter">* แก้ไขได้อีก {2 - cycleUpdateCount} ครั้ง</p>
+                        </div>
+                    ) : (
+                        <div className="mb-3 border-b border-gray-50 pb-3 flex items-end justify-between">
+                            <p className="text-xs font-black text-gray-700 leading-none">
+                                วันที่ <span className="text-lg text-indigo-600 leading-none">{cycleDate === 31 ? 'สิ้นเดือน' : cycleDate}</span>
+                            </p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase leading-none mb-0.5">ของทุกเดือน</p>
+                        </div>
+                    )}
+
+                    {/* ส่วนที่ 2: ขีดจำกัดการใช้เงิน */}
+                    <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-1.5">
+                            <Target size={12} className="text-indigo-500" />
+                            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">จำกัดการใช้เงิน (แก้ได้ 2 ครั้ง)</h3>
+                        </div>
+                        <button onClick={() => { setIsEditingBudget(!isEditingBudget); setTempBudget(budget); }} className="text-[8px] text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md">
                             {isEditingBudget ? 'ยกเลิก' : 'ตั้งค่า'}
                         </button>
                     </div>
 
                     {isEditingBudget ? (
-                        <div className="space-y-3">
+                        <div className="space-y-1">
                             <div className="flex gap-2">
-                                <input type="number" className="flex-1 border-b-2 border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 text-sm" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)} autoFocus />
-                                <button onClick={handleUpdateBudget} className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-md active:scale-95 transition-all">บันทึก</button>
+                                <input type="number" className="flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 text-xs" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)} autoFocus />
+                                <button onClick={handleUpdateBudget} className="bg-indigo-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">บันทึก</button>
                             </div>
-                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tighter">* แก้ไขได้อีก {2 - budgetUpdateCount} ครั้งในเดือนนี้</p>
+                            <p className="text-[7px] text-gray-400 font-bold uppercase tracking-tighter">* แก้ไขได้อีก {2 - budgetUpdateCount} ครั้ง</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
                             <div className="flex justify-between items-end">
                                 <div><p className="text-lg font-black text-gray-700 leading-none">฿{budget.toLocaleString()}</p></div>
                                 <div className="text-right">
-                                    <p className={`text-[10px] font-black ${overBudget ? 'text-red-500' : 'text-green-600'}`}>
+                                    <p className={`text-[9px] font-black ${overBudget ? 'text-red-500' : 'text-green-600'}`}>
                                         {overBudget ? `เกินงบ ฿${Math.abs(remainingInBudget).toLocaleString()}` : `ใช้ได้อีก ฿${remainingInBudget.toLocaleString()}`}
                                     </p>
                                 </div>
                             </div>
-                            <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden">
+                            <div className="w-full h-1 bg-gray-50 rounded-full overflow-hidden">
                                 <div className={`h-full transition-all duration-700 ease-out ${overBudget ? 'bg-red-500' : 'bg-indigo-500'}`} style={{ width: `${budgetUsagePercent}%` }}></div>
                             </div>
                         </div>

@@ -51,11 +51,11 @@ const MainLayout = () => {
                     </div>
                     <div className="flex justify-between border-b pb-2">
                         <span className="text-gray-400 font-bold text-xs uppercase">Version</span>
-                        <span className="font-black text-gray-700">2.4.0 (Stable)</span>
+                        <span className="font-black text-gray-700">2.5.1 (Stable)</span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                         <span className="text-gray-400 font-bold text-xs uppercase">Last Update</span>
-                        <span className="font-bold text-gray-600">06 May 2026</span>
+                        <span className="font-bold text-gray-600">10 May 2026</span>
                     </div>
                     <div className="bg-indigo-50 p-3 rounded-xl text-[10px] text-indigo-400 font-medium leading-relaxed">
                         โดยทีมพัฒนา Oattha Dev. <br/>
