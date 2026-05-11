@@ -44,6 +44,7 @@ func GetSummary(c *fiber.Ctx) error {
 	}
 
 	// --- แก้ไขใหญ่: ลบการบังคับล็อค EXTRACT(YEAR) ออก เพื่อให้ข้ามปีได้ เช่น 25 ธ.ค. - 24 ม.ค. ---
+	// เพิ่มเงื่อนไขสำคัญ: ระบบจะนับ Income/Expense เฉพาะรายการที่ไม่ใช่ 'transfer' เท่านั้น
 	queryIncome := common.DB.Model(&models.Transaction{}).Where("user_id = ? AND type = ?", uID, "income")
 	queryExpense := common.DB.Model(&models.Transaction{}).Where("user_id = ? AND type = ?", uID, "expense")
 

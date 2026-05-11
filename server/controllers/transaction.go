@@ -56,6 +56,14 @@ func CreateTransaction(c *fiber.Ctx) error {
 	category := c.FormValue("category")
 	note := c.FormValue("note")
 	accID, _ := strconv.ParseUint(c.FormValue("account_id"), 10, 32)
+	
+	// เพิ่มการรับค่าบัญชีปลายทาง (สำหรับ transfer)
+	toAccIDStr := c.FormValue("to_account_id")
+	var toAccID uint
+	if toAccIDStr != "" {
+		val, _ := strconv.ParseUint(toAccIDStr, 10, 32)
+		toAccID = uint(val)
+	}
 
 	// รับค่าวันที่
 	dateStr := c.FormValue("date")
@@ -72,39 +80,72 @@ func CreateTransaction(c *fiber.Ctx) error {
 	}
 
 	t := models.Transaction{
-		UserID:    uID,
-		Amount:    amount,
-		Type:      tType,
-		Category:  category,
-		Note:      note,
-		AccountID: uint(accID),
-		Date:      parsedDate,
-		Image:     imageURL, // เก็บ URL จาก Cloudinary ลงในฟิลด์ Image
+		UserID:      uID,
+		Amount:      amount,
+		Type:        tType,
+		Category:    category,
+		Note:        note,
+		AccountID:   uint(accID),
+		ToAccountID: toAccID, // เพิ่มฟิลด์บัญชีปลายทางลงในโมเดล
+		Date:        parsedDate,
+		Image:       imageURL, // เก็บ URL จาก Cloudinary ลงในฟิลด์ Image
 	}
 
-	// 3. เริ่ม Transaction
+	// 3. เริ่ม Transaction (DB Transaction)
 	tx := common.DB.Begin()
 	if err := tx.Create(&t).Error; err != nil {
 		tx.Rollback()
 		return c.Status(500).JSON(fiber.Map{"error": "Could not create transaction"})
 	}
 
+	// บัญชีต้นทาง
 	var acc models.Account
 	if err := tx.First(&acc, t.AccountID).Error; err != nil {
 		tx.Rollback()
 		return c.Status(404).JSON(fiber.Map{"error": "Account not found"})
 	}
 
-	if t.Type == "expense" {
-		acc.Balance -= t.Amount
-	} else {
-		acc.Balance += t.Amount
-	}
+	// --- ปรับปรุง Logic การอัปเดตยอดเงินตามคัมภีร์โอ๊ต ---
+	if t.Type == "transfer" {
+		// ตรวจสอบว่ามีบัญชีปลายทางส่งมาไหม
+		if t.ToAccountID == 0 {
+			tx.Rollback()
+			return c.Status(400).JSON(fiber.Map{"error": "To account is required for transfer"})
+		}
 
-	if err := tx.Save(&acc).Error; err != nil {
-		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"error": "Could not update account balance"})
+		// 1. หักเงินบัญชีต้นทาง
+		acc.Balance -= t.Amount
+		if err := tx.Save(&acc).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Could not update source account balance"})
+		}
+
+		// 2. เพิ่มเงินบัญชีปลายทาง
+		var toAcc models.Account
+		if err := tx.First(&toAcc, t.ToAccountID).Error; err != nil {
+			tx.Rollback()
+			return c.Status(404).JSON(fiber.Map{"error": "Destination account not found"})
+		}
+		toAcc.Balance += t.Amount
+		if err := tx.Save(&toAcc).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Could not update destination account balance"})
+		}
+
+	} else {
+		// Logic ปกติ (Expense / Income)
+		if t.Type == "expense" {
+			acc.Balance -= t.Amount
+		} else {
+			acc.Balance += t.Amount
+		}
+
+		if err := tx.Save(&acc).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Could not update account balance"})
+		}
 	}
+	// ----------------------------------------------
 
 	tx.Commit()
 

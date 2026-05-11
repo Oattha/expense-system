@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '../api/axios';
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, Landmark, Banknote, ChevronDown, ChevronUp, Clock, Plus, Target, BarChart3, CalendarDays, X, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ArrowRight, Landmark, Banknote, ChevronDown, ChevronUp, Clock, Plus, Target, BarChart3, CalendarDays, X, RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Swal from 'sweetalert2'; 
@@ -12,10 +12,8 @@ const Dashboard = () => {
     const [transactions, setTransactions] = useState([]);
     const [showAccounts, setShowAccounts] = useState(false);
     
-    // --- เพิ่ม State สำหรับโหลดปุ่มรีเฟรช ---
     const [isRefreshing, setIsRefreshing] = useState(false);
     
-    // --- ระบบ MJ Overlay & Sound ---
     const [showMJOverlay, setShowMJOverlay] = useState(false);
     const audioRef = useRef(new Audio()); 
 
@@ -37,7 +35,6 @@ const Dashboard = () => {
     const [tempBudget, setTempBudget] = useState('');
     const [budgetUpdateCount, setBudgetUpdateCount] = useState(0); 
     
-    // --- State สำหรับรอบตัดบัญชี ---
     const [cycleDate, setCycleDate] = useState(1);
     const [cycleUpdateCount, setCycleUpdateCount] = useState(0);
     const [isEditingCycle, setIsEditingCycle] = useState(false);
@@ -66,11 +63,9 @@ const Dashboard = () => {
         };
     }, [showMJOverlay]);
 
-    // --- แยกฟังก์ชันดึงข้อมูลออกมา เพื่อให้ปุ่มรีเฟรชเรียกใช้ได้ ---
     const fetchDashboardData = async () => {
-        setIsRefreshing(true); // เริ่มหมุนปุ่ม
+        setIsRefreshing(true);
         try {
-            const currentActualYear = new Date().getFullYear();
             const [summaryRes, accountsRes, transRes, profileRes, statsRes, currentMonthRes] = await Promise.all([
                 api.get(`/summary?year=${selectedYear}`),
                 api.get('/accounts'),
@@ -88,8 +83,6 @@ const Dashboard = () => {
             if (profileRes.data) {
                 setBudget(Number(profileRes.data.monthly_budget) || 0); 
                 setBudgetUpdateCount(profileRes.data.budget_update_count || 0); 
-                
-                // เซ็ตค่ารอบบิลจาก API Profile
                 setCycleDate(profileRes.data.cycle_date || 1);
                 setCycleUpdateCount(profileRes.data.cycle_update_count || 0);
             }
@@ -102,11 +95,10 @@ const Dashboard = () => {
         } catch (err) {
             console.error('Error fetching data', err);
         } finally {
-            setIsRefreshing(false); // หยุดหมุนปุ่ม
+            setIsRefreshing(false);
         }
     };
 
-    // ใช้ useEffect เรียกฟังก์ชันดึงข้อมูลแทนของเดิม และเพิ่ม cycleDate เพื่อให้รีเฟรชเมื่อค่าเปลี่ยน
     useEffect(() => {
         fetchDashboardData();
     }, [selectedYear, selectedMonth, budget, cycleDate]); 
@@ -148,7 +140,6 @@ const Dashboard = () => {
         }
     };
 
-    // --- ฟังก์ชันอัปเดตรอบตัดบัญชี ---
     const handleUpdateCycle = async () => {
         if (cycleUpdateCount >= 2) {
             setShowMJOverlay(true); 
@@ -169,7 +160,6 @@ const Dashboard = () => {
                 timer: 2000, 
                 borderRadius: '20px'
             });
-            // รีโหลดข้อมูลให้คำนวณกราฟและยอดรวมตามรอบบิลใหม่
             fetchDashboardData();
         } catch (err) {
             if (err.response?.status === 403) {
@@ -183,12 +173,10 @@ const Dashboard = () => {
 
     const cashTotal = accounts.filter(acc => acc.type.toLowerCase() === 'cash').reduce((sum, acc) => sum + Number(acc.balance), 0);
     const bankTotal = accounts.filter(acc => acc.type.toLowerCase() !== 'cash').reduce((sum, acc) => sum + Number(acc.balance), 0);
-    const filteredTransactions = transactions.slice(0, 5);
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] pb-24 text-[#444] font-kanit relative">
             
-            {/* --- Billie Jean MJ Overlay Zone --- */}
             {showMJOverlay && (
                 <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-500">
                     <button onClick={() => setShowMJOverlay(false)} className="absolute top-10 right-6 text-white/30 hover:text-white transition-colors"><X size={32}/></button>
@@ -224,7 +212,6 @@ const Dashboard = () => {
                     <h1 className="text-xs font-black text-gray-700 uppercase">สถิติการเงิน</h1>
                 </div>
                 
-                {/* --- ปุ่มรีเฟรชข้อมูล --- */}
                 <button 
                     onClick={fetchDashboardData} 
                     disabled={isRefreshing}
@@ -269,7 +256,6 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                {/* --- ปรับปรุงกล่อง สรุปรายการตามรอบบิล ให้บางเฉียบ (ลด p-4 เป็น p-3, ลดช่องว่าง, ลดขนาดตัวอักษร) --- */}
                 <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
                         <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">สรุปรายการตามรอบบิล</h3>
@@ -297,8 +283,6 @@ const Dashboard = () => {
                 </div>
 
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                    
-                    {/* ส่วนที่ 1: รอบตัดบัญชี */}
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-1.5">
                             <CalendarDays size={12} className="text-indigo-500" />
@@ -331,7 +315,6 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {/* ส่วนที่ 2: ขีดจำกัดการใช้เงิน */}
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-1.5">
                             <Target size={12} className="text-indigo-500" />
@@ -404,12 +387,22 @@ const Dashboard = () => {
                         {transactions.length > 0 ? (
                             transactions.slice(0, 5).map(item => {
                                 const account = accounts.find(a => a.id === item.account_id);
+                                const toAccount = item.to_account_id ? accounts.find(a => a.id === item.to_account_id) : null;
+                                const isTransfer = item.type === 'transfer';
+
                                 return (
-                                    <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer">
+                                    <div key={item.id} onClick={() => navigate('/transaction')} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-xl ${item.type === 'expense' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}><Clock size={16} /></div>
+                                            <div className={`p-2 rounded-xl ${isTransfer ? 'bg-indigo-50 text-indigo-500' : item.type === 'expense' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
+                                                {isTransfer ? <ArrowRightLeft size={16} /> : <Clock size={16} />}
+                                            </div>
                                             <div>
-                                                <p className="text-sm font-black text-gray-700 leading-tight">{item.category || 'ทั่วไป'}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="text-sm font-black text-gray-700 leading-tight">
+                                                        {isTransfer ? `โอนไปยัง ${toAccount?.name || '...'}` : (item.category || 'ทั่วไป')}
+                                                    </p>
+                                                    {isTransfer && <ArrowRightLeft size={10} className="text-indigo-400" />}
+                                                </div>
                                                 <div className="flex items-center gap-1 mt-0.5 opacity-60">
                                                     {account?.type.toLowerCase() === 'cash' ? <Wallet size={8} className="text-orange-400" /> : <Landmark size={12} className="text-blue-400" />}
                                                     <span className="text-[8px] font-black text-gray-500 uppercase">{account?.name || '-'}</span>
@@ -417,7 +410,9 @@ const Dashboard = () => {
                                                 <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} {new Date(item.date).getFullYear() + 543}</p>
                                             </div>
                                         </div>
-                                        <p className={`text-sm font-black ${item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>{item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}</p>
+                                        <p className={`text-sm font-black ${isTransfer ? 'text-indigo-600' : item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
+                                            {isTransfer ? '' : item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}
+                                        </p>
                                     </div>
                                 );
                             })

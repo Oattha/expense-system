@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios'; 
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Tag, PlusCircle, Wallet, Landmark, Check, Calendar, MessageSquare, Filter, X, Download, Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Tag, PlusCircle, Wallet, Landmark, Check, Calendar, MessageSquare, Filter, X, Download, Camera, Image as ImageIcon, Loader2, ArrowRightLeft } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression'; 
 import heic2any from 'heic2any'; 
@@ -26,16 +26,15 @@ const Transaction = () => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
 
-    // --- เลื่อน State เหล่านี้ขึ้นมาไว้ด้านบน เพื่อป้องกัน Error ก่อนเรียกใช้ ---
     const [filterCategory, setFilterCategory] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     
-    // --- State สำหรับระบบแบ่งหน้า (Pagination) ---
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10; // กำหนดให้โชว์หน้าละ 10 รายการ
+    const itemsPerPage = 10; 
 
     const [form, setForm] = useState({ 
         account_id: '', 
+        to_account_id: '', // เพิ่มฟิลด์บัญชีปลายทาง
         amount: '', 
         type: 'expense', 
         category: '', 
@@ -51,7 +50,6 @@ const Transaction = () => {
         }
     }, []);
 
-    // รีเซ็ตหน้ากลับไปหน้า 1 เสมอเวลาเปลี่ยนเดือน หรือเปลี่ยนตัวกรอง
     useEffect(() => {
         setCurrentPage(1);
     }, [selectedMonth, filterCategory]);
@@ -74,21 +72,28 @@ const Transaction = () => {
     const showDetail = (item) => {
         const imageUrl = item.image || null; 
         const account = accounts.find(a => a.id === item.account_id);
+        const toAccount = item.to_account_id ? accounts.find(a => a.id === item.to_account_id) : null;
         
         Swal.fire({
-            title: `<span class="font-kanit text-lg uppercase font-black">${item.category}</span>`,
+            title: `<span class="font-kanit text-lg uppercase font-black">${item.type === 'transfer' ? 'โอนเงินระหว่างบัญชี' : item.category}</span>`,
             html: `
                 <div class="font-kanit text-left space-y-2 p-2">
                     <div class="flex justify-between border-b pb-2">
                         <span class="text-gray-400 font-bold text-xs uppercase">ยอดเงิน</span>
-                        <span class="font-black ${item.type === 'expense' ? 'text-red-500' : 'text-green-500'}">
-                            ${item.type === 'expense' ? '-' : '+'} ฿${Number(item.amount).toLocaleString()}
+                        <span class="font-black ${item.type === 'expense' ? 'text-red-500' : item.type === 'income' ? 'text-green-500' : 'text-indigo-500'}">
+                            ${item.type === 'expense' ? '-' : item.type === 'income' ? '+' : ''} ฿${Number(item.amount).toLocaleString()}
                         </span>
                     </div>
                     <div class="flex justify-between border-b pb-2">
-                        <span class="text-gray-400 font-bold text-xs uppercase">ใช้บัญชี</span>
+                        <span class="text-gray-400 font-bold text-xs uppercase">${item.type === 'transfer' ? 'จากบัญชี' : 'ใช้บัญชี'}</span>
                         <span class="font-bold text-indigo-600">${account?.name || 'ทั่วไป'}</span>
                     </div>
+                    ${item.type === 'transfer' ? `
+                    <div class="flex justify-between border-b pb-2">
+                        <span class="text-gray-400 font-bold text-xs uppercase">ไปบัญชี</span>
+                        <span class="font-bold text-green-600">${toAccount?.name || '-'}</span>
+                    </div>
+                    ` : ''}
                     <div class="flex justify-between border-b pb-2">
                         <span class="text-gray-400 font-bold text-xs uppercase">บันทึก</span>
                         <span class="font-bold text-gray-700">${item.note || '-'}</span>
@@ -152,7 +157,6 @@ const Transaction = () => {
         return [...cats].sort((a, b) => (counts[b.name] || 0) - (counts[a.name] || 0));
     };
 
-    // กรองประวัติตามเดือนและหมวดหมู่
     const filteredHistory = history.filter(item => {
         const itemMonth = new Date(item.date).toISOString().slice(0, 7);
         const matchMonth = itemMonth === selectedMonth;
@@ -160,29 +164,35 @@ const Transaction = () => {
         return matchMonth && matchCategory;
     });
 
-    // --- คำนวณข้อมูลสำหรับระบบแบ่งหน้า (Pagination) ---
-    // 1. เรียงลำดับจากใหม่สุดไปเก่าสุด
     const sortedFilteredHistory = [...filteredHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-    // 2. คำนวณจำนวนหน้าทั้งหมด
     const totalPages = Math.ceil(sortedFilteredHistory.length / itemsPerPage);
-    // 3. ตัด Array เอาเฉพาะรายการของหน้าปัจจุบัน
     const currentItems = sortedFilteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
         if (!form.account_id) {
-            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกบัญชี', text: 'พี่ต้องเลือกบัญชีที่ใช้จ่ายก่อนบันทึกนะครับ', confirmButtonColor: '#6366f1', fontFamily: 'Kanit' });
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกบัญชี', text: 'พี่ต้องเลือกบัญชีต้นทางก่อนนะครับ', confirmButtonColor: '#6366f1', fontFamily: 'Kanit' });
+            return;
+        }
+
+        if (form.type === 'transfer' && !form.to_account_id) {
+            Swal.fire({ icon: 'warning', title: 'เลือกบัญชีปลายทาง', text: 'พี่จะโอนไปบัญชีไหนครับ เลือกหน่อยนะ', confirmButtonColor: '#6366f1', fontFamily: 'Kanit' });
+            return;
+        }
+
+        if (form.type === 'transfer' && form.account_id === form.to_account_id) {
+            Swal.fire({ icon: 'warning', title: 'บัญชีซ้ำกัน', text: 'โอนเข้าบัญชีเดิมไม่ได้นะครับพี่โอ๊ต', confirmButtonColor: '#6366f1', fontFamily: 'Kanit' });
             return;
         }
 
         const selectedAcc = accounts.find(a => a.id === Number(form.account_id));
         const amount = Number(form.amount);
 
-        if (form.type === 'expense' && selectedAcc && selectedAcc.balance < amount) {
+        if ((form.type === 'expense' || form.type === 'transfer') && selectedAcc && selectedAcc.balance < amount) {
             const confirmResult = await Swal.fire({
                 title: 'เฮ้ย! ยอดเงินจะติดลบนะ',
-                text: `บัญชี "${selectedAcc.name}" มีเงินแค่ ฿${selectedAcc.balance.toLocaleString()} บันทึกผิดหรือเปล่าครับ?`,
+                text: `บัญชี "${selectedAcc.name}" มีเงินแค่ ฿${selectedAcc.balance.toLocaleString()} ยืนยันจะทำรายการต่อไหมครับ?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#6366f1',
@@ -198,7 +208,7 @@ const Transaction = () => {
         setIsUploading(true);
         Swal.fire({
             title: 'กำลังบันทึกข้อมูล...',
-            text: 'รอสักครู่ครับพี่อรรถพล กำลังส่งไฟล์ไปหลังบ้าน',
+            text: 'รอสักครู่ครับพี่อรรถพล กำลังจัดการธุรกรรมให้',
             allowOutsideClick: false,
             borderRadius: '20px',
             didOpen: () => { Swal.showLoading(); }
@@ -206,9 +216,10 @@ const Transaction = () => {
 
         const formData = new FormData();
         formData.append('account_id', form.account_id);
+        if (form.type === 'transfer') formData.append('to_account_id', form.to_account_id);
         formData.append('amount', form.amount);
         formData.append('type', form.type);
-        formData.append('category', form.category || "ทั่วไป");
+        formData.append('category', form.type === 'transfer' ? 'โอนเงิน' : (form.category || "ทั่วไป"));
         formData.append('note', form.note || "");
         formData.append('date', new Date(transactionDate).toISOString());
         
@@ -224,7 +235,7 @@ const Transaction = () => {
             Swal.fire({
                 icon: 'success',
                 title: 'บันทึกสำเร็จ!',
-                text: 'ข้อมูลรายรายการถูกบันทึกลงระบบแล้วครับพี่',
+                text: 'รายการถูกบันทึกลงระบบแล้วครับพี่',
                 showConfirmButton: false,
                 timer: 1500,
                 borderRadius: '20px',
@@ -233,11 +244,11 @@ const Transaction = () => {
 
             localStorage.setItem('default_account_id', form.account_id);
             fetchData(); 
-            setForm(prev => ({ ...prev, amount: '', category: '', note: '' })); 
+            setForm(prev => ({ ...prev, amount: '', category: '', note: '', to_account_id: '' })); 
             setTransactionDate(getLocalDatetime());
             setSelectedImage(null);
             setPreviewUrl(null);
-            setCurrentPage(1); // พอบันทึกเสร็จ ให้เด้งกลับมาหน้าแรกเพื่อดูรายการล่าสุด
+            setCurrentPage(1); 
 
         } catch (err) { 
             Swal.fire({
@@ -272,22 +283,27 @@ const Transaction = () => {
             alert("ไม่มีข้อมูลที่จะ Export ครับพี่ชาย");
             return;
         }
-        // คำนวณจาก filteredHistory ทั้งหมด ไม่ใช่แค่ currentItems ในหน้าปัจจุบัน
-        const sortedForCalc = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const sortedForCalc = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(a.date));
         let runningBalance = 0;
         const exportData = sortedForCalc.map(item => {
             const isIncome = item.type === 'income';
+            const isTransfer = item.type === 'transfer';
             const incomeAmount = isIncome ? item.amount : 0;
-            const expenseAmount = !isIncome ? item.amount : 0;
-            runningBalance += (incomeAmount - expenseAmount);
+            const expenseAmount = (item.type === 'expense') ? item.amount : 0;
+            
+            if (!isTransfer) runningBalance += (incomeAmount - expenseAmount);
+            
             const account = accounts.find(a => a.id === item.account_id);
+            const toAcc = item.to_account_id ? accounts.find(a => a.id === item.to_account_id) : null;
+
             return {
                 "วันที่": new Date(item.date).toLocaleDateString('th-TH'),
-                "รายการ": `${item.category}${item.note ? ' (' + item.note + ')' : ''}`,
+                "ประเภท": item.type === 'transfer' ? 'โอนเงิน' : (item.type === 'income' ? 'รายรับ' : 'รายจ่าย'),
+                "รายการ": isTransfer ? `โอนจาก ${account?.name} ไป ${toAcc?.name}` : `${item.category}${item.note ? ' (' + item.note + ')' : ''}`,
                 "บัญชี": account?.name || '-',
                 "รายรับ": incomeAmount || "",
                 "รายจ่าย": expenseAmount || "",
-                "คงเหลือ": runningBalance
+                "โอนย้าย": isTransfer ? item.amount : ""
             };
         });
         const ws = XLSX.utils.json_to_sheet(exportData);
@@ -342,34 +358,43 @@ const Transaction = () => {
                             className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'expense' ? 'bg-red-500 text-white shadow-sm border-2 border-red-600 scale-[1.01]' : 'text-gray-400'}`}>
                             รายจ่าย
                         </button>
+                        <button 
+                            type="button" 
+                                onClick={() => setForm({...form, type: 'transfer', category: 'โอนเงิน', note: ''})}
+                                className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'transfer' ? 'bg-indigo-600 text-white shadow-sm border-2 border-indigo-700 scale-[1.01]' : 'text-gray-400'}`}
+                            >
+                            โอนเงิน <span className="text-[9px] font-normal">(ย้ายบัญชี)</span>
+                        </button>
                         <button type="button" onClick={() => setForm({...form, type: 'income', category: '', note: ''})}
-                            className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'income' ? 'bg-green-50 text-white shadow-sm border-2 border-green-600 scale-[1.01]' : 'text-gray-400'}`}>
+                            className={`flex-1 py-2 rounded-md text-[11px] font-bold transition-all ${form.type === 'income' ? 'bg-green-600 text-white shadow-sm border-2 border-green-700 scale-[1.01]' : 'text-gray-400'}`}>
                             รายรับ
                         </button>
                     </div>
 
                     <div className="bg-white px-4 py-4 rounded-xl border border-gray-100 shadow-sm text-center">
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">จำนวนเงิน</p>
-                        <div className={`flex items-center justify-center border-b pb-1 transition-colors ${form.type === 'expense' ? 'border-red-100 focus-within:border-red-500' : 'border-green-100 focus-within:border-green-500'}`}>
-                            <span className={`text-xl font-black mr-2 ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>฿</span>
-                            <input type="number" placeholder="0.00" className={`text-3xl font-black w-full max-w-[160px] text-center bg-transparent outline-none ${form.type === 'expense' ? 'text-red-500' : 'text-green-500'}`} onChange={e => setForm({...form, amount: e.target.value})} value={form.amount} required />
+                        <div className={`flex items-center justify-center border-b pb-1 transition-colors ${form.type === 'expense' ? 'border-red-100 focus-within:border-red-500' : form.type === 'transfer' ? 'border-indigo-100 focus-within:border-indigo-500' : 'border-green-100 focus-within:border-green-500'}`}>
+                            <span className={`text-xl font-black mr-2 ${form.type === 'expense' ? 'text-red-500' : form.type === 'transfer' ? 'text-indigo-600' : 'text-green-600'}`}>฿</span>
+                            <input type="number" placeholder="0.00" className={`text-3xl font-black w-full max-w-[160px] text-center bg-transparent outline-none ${form.type === 'expense' ? 'text-red-500' : form.type === 'transfer' ? 'text-indigo-600' : 'text-green-600'}`} onChange={e => setForm({...form, amount: e.target.value})} value={form.amount} required />
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                            <div className="flex-shrink-0 flex items-center gap-1.5 bg-gray-50 border border-dashed border-gray-300 rounded-lg px-2.5 py-1.5">
-                                <input type="text" placeholder="เพิ่ม..." className="bg-transparent text-[10px] outline-none w-10 font-bold" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
-                                <button type="button" onClick={handleAddCategory} className="text-indigo-600"><PlusCircle size={12} /></button>
+                    {form.type !== 'transfer' && (
+                        <div className="space-y-1">
+                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                <div className="flex-shrink-0 flex items-center gap-1.5 bg-gray-50 border border-dashed border-gray-300 rounded-lg px-2.5 py-1.5">
+                                    <input type="text" placeholder="เพิ่ม..." className="bg-transparent text-[10px] outline-none w-10 font-bold" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
+                                    <button type="button" onClick={handleAddCategory} className="text-indigo-600"><PlusCircle size={12} /></button>
+                                </div>
+                                {getSortedCategories(categories.filter(c => c.type === (form.type === 'transfer' ? 'expense' : form.type))).map(cat => (
+                                    <button key={cat.id} type="button" onClick={() => toggleCategory(cat.name)} 
+                                        className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${form.category === cat.name ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-100 bg-white text-gray-500'}`}>
+                                        {cat.name}
+                                    </button>
+                                ))}
                             </div>
-                            {getSortedCategories(categories.filter(c => c.type === form.type)).map(cat => (
-                                <button key={cat.id} type="button" onClick={() => toggleCategory(cat.name)} 
-                                    className={`flex-shrink-0 px-4 py-1.5 rounded-lg border text-[10px] font-bold transition-all ${form.category === cat.name ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-gray-100 bg-white text-gray-500'}`}>
-                                    {cat.name}
-                                </button>
-                            ))}
                         </div>
-                    </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2">
                         <div className="flex items-center gap-2 bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
@@ -403,21 +428,46 @@ const Transaction = () => {
                         )}
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                        {accounts
-                            .filter(acc => acc.is_active) 
-                            .sort((a, b) => (a.id === Number(form.account_id) ? -1 : 1))
-                            .map(acc => (
-                                <button key={acc.id} type="button" onClick={() => setForm({...form, account_id: acc.id})}
-                                    className={`flex-shrink-0 min-w-[100px] p-2 rounded-lg border text-center transition-all relative ${form.account_id === acc.id ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-100 bg-white'}`}>
-                                    <div className="flex items-center justify-center gap-2">
-                                        {acc.type.toLowerCase() === 'cash' ? <Wallet size={14} className="text-orange-400"/> : <Landmark size={14} className="text-blue-400"/>}
-                                        <span className="text-[10px] font-bold truncate">{acc.name}</span>
-                                    </div>
-                                    {form.account_id === acc.id && (<div className="absolute top-1 right-1"><Check size={10} className="text-indigo-600 font-bold" /></div>)}
-                                </button>
-                            ))}
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
+                            {form.type === 'transfer' ? 'จากบัญชีต้นทาง' : 'ใช้บัญชี'}
+                        </p>
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                            {accounts
+                                .filter(acc => acc.is_active) 
+                                .sort((a, b) => (a.id === Number(form.account_id) ? -1 : 1))
+                                .map(acc => (
+                                    <button key={acc.id} type="button" onClick={() => setForm({...form, account_id: acc.id})}
+                                        className={`flex-shrink-0 min-w-[100px] p-2 rounded-lg border text-center transition-all relative ${form.account_id === acc.id ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-100 bg-white'}`}>
+                                        <div className="flex items-center justify-center gap-2">
+                                            {acc.type.toLowerCase() === 'cash' ? <Wallet size={14} className="text-orange-400"/> : <Landmark size={14} className="text-blue-400"/>}
+                                            <span className="text-[10px] font-bold truncate">{acc.name}</span>
+                                        </div>
+                                        {form.account_id === acc.id && (<div className="absolute top-1 right-1"><Check size={10} className="text-indigo-600 font-bold" /></div>)}
+                                    </button>
+                                ))}
+                        </div>
                     </div>
+
+                    {form.type === 'transfer' && (
+                        <div className="space-y-2 animate-in slide-in-from-left duration-300">
+                            <p className="text-[10px] font-black text-green-600 uppercase tracking-widest pl-1">โอนไปยังบัญชี</p>
+                            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                                {accounts
+                                    .filter(acc => acc.is_active && acc.id !== Number(form.account_id)) 
+                                    .map(acc => (
+                                        <button key={acc.id} type="button" onClick={() => setForm({...form, to_account_id: acc.id})}
+                                            className={`flex-shrink-0 min-w-[100px] p-2 rounded-lg border text-center transition-all relative ${form.to_account_id === acc.id ? 'border-green-500 bg-green-50 shadow-sm' : 'border-gray-100 bg-white'}`}>
+                                            <div className="flex items-center justify-center gap-2">
+                                                {acc.type.toLowerCase() === 'cash' ? <Wallet size={14} className="text-orange-400"/> : <Landmark size={14} className="text-blue-400"/>}
+                                                <span className="text-[10px] font-bold truncate">{acc.name}</span>
+                                            </div>
+                                            {form.to_account_id === acc.id && (<div className="absolute top-1 right-1"><Check size={10} className="text-green-600 font-bold" /></div>)}
+                                        </button>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
 
                     <button 
                         type="submit" 
@@ -443,17 +493,20 @@ const Transaction = () => {
                         </div>
 
                         <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden shadow-sm">
-                            {/* --- เรียกใช้ currentItems สำหรับแสดงผลเฉพาะหน้าปัจจุบัน --- */}
                             {currentItems.length > 0 ? currentItems.map((item) => {
                                 const account = accounts.find(a => a.id === item.account_id);
+                                const toAcc = item.to_account_id ? accounts.find(a => a.id === item.to_account_id) : null;
                                 return (
                                     <div key={item.id} onClick={() => showDetail(item)} className="p-3 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer active:bg-indigo-50/30">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-1 h-1 rounded-full ${item.type === 'expense' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                            <div className={`w-1 h-1 rounded-full ${item.type === 'expense' ? 'bg-red-500' : item.type === 'income' ? 'bg-green-500' : 'bg-indigo-500'}`}></div>
                                             <div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <p className="font-bold text-gray-800 text-xs leading-none uppercase">{item.category || 'ทั่วไป'}</p>
+                                                    <p className="font-bold text-gray-800 text-xs leading-none uppercase">
+                                                        {item.type === 'transfer' ? `โอนไปยัง ${toAcc?.name || '...'}` : (item.category || 'ทั่วไป')}
+                                                    </p>
                                                     {item.image && <ImageIcon size={10} className="text-indigo-400 animate-pulse" />}
+                                                    {item.type === 'transfer' && <ArrowRightLeft size={10} className="text-indigo-400" />}
                                                 </div>
                                                 <div className="flex items-center gap-1 mt-0.5 opacity-70">
                                                     {account?.type.toLowerCase() === 'cash' ? <Wallet size={8} className="text-orange-400" /> : <Landmark size={8} className="text-blue-400" />}
@@ -463,14 +516,13 @@ const Transaction = () => {
                                                 <p className="text-[8px] text-gray-400 font-bold uppercase mt-0.5">{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} น.</p>
                                             </div>
                                         </div>
-                                        <span className={`font-bold text-xs ${item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
-                                            {item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}
+                                        <span className={`font-bold text-xs ${item.type === 'expense' ? 'text-red-500' : item.type === 'income' ? 'text-green-600' : 'text-indigo-600'}`}>
+                                            {item.type === 'expense' ? '-' : item.type === 'income' ? '+' : ''} ฿{Number(item.amount).toLocaleString()}
                                         </span>
                                     </div>
                                 );
                             }) : ( <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase tracking-widest">ไม่มีข้อมูล</div> )}
 
-                            {/* --- ปุ่มเปลี่ยนหน้า (Pagination UI) จะโชว์ก็ต่อเมื่อมีมากกว่า 1 หน้า --- */}
                             {totalPages > 1 && (
                                 <div className="flex justify-between items-center p-3 border-t border-gray-100 bg-gray-50/50">
                                     <button 

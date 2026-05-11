@@ -51,6 +51,7 @@ type Transaction struct {
 	Date      time.Time `json:"date"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"-"`
+	ToAccountID uint	`json:"to_account_id,omitempty"` // สำหรับโอนเงินระหว่างบัญชี
 }
 
 type Category struct {
