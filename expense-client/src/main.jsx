@@ -6,6 +6,9 @@ import App from './App.jsx'
 // --- 1. เพิ่ม Import สำหรับระบบอัปเดต PWA และ SweetAlert2 ---
 import { registerSW } from 'virtual:pwa-register'
 import Swal from 'sweetalert2'
+
+// 🚨 [เพิ่มใหม่] 1. นำเข้า Provider ของ FontSize
+import { FontSizeProvider } from './contexts/FontSizeContext'
 // -------------------------------------------------------
 
 // --- 2. เพิ่มระบบเช็คอัปเดตและเด้งแจ้งเตือน ---
@@ -33,6 +36,9 @@ const updateSW = registerSW({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {/* 🚨 [แก้ไขจุดนี้] 2. เอา FontSizeProvider มาครอบ App ไว้ เพื่อให้ Context ส่งข้อมูลได้ทั่วทั้งเว็บ */}
+    <FontSizeProvider>
+      <App />
+    </FontSizeProvider>
   </StrictMode>,
 )

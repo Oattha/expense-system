@@ -24,6 +24,9 @@ import imageCompression from "browser-image-compression";
 import heic2any from "heic2any"; 
 import Swal from "sweetalert2";
 
+// 🚨 นำเข้าระบบจัดการขนาดตัวอักษร
+import { useFontSize } from "../contexts/FontSizeContext";
+
 // Helper สำหรับเลือกไอคอนตาม IconType
 const IconPicker = ({ type, size = 14 }) => {
   const icons = {
@@ -44,6 +47,9 @@ const IconPicker = ({ type, size = 14 }) => {
 const Profile = () => {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+
+  // 🚨 เรียกใช้งานฟังก์ชันดึงคลาสขนาดฟอนต์ส่วนกลาง
+  const { getCls } = useFontSize();
 
   const [fullName, setFullName] = useState(user?.full_name || "");
   const [selectedFrame, setSelectedFrame] = useState(user?.avatar_frame || "");
@@ -163,13 +169,13 @@ const Profile = () => {
           >
             <ChevronLeft size={24} />
           </button>
-          <h2 className="text-xl font-black uppercase text-gray-800 tracking-tighter">
+          <h2 className={`font-black uppercase text-gray-800 tracking-tighter ${getCls('title')}`}>
             Profile Settings
           </h2>
         </div>
         <button
           onClick={() => navigate("/admin/frames")}
-          className="flex items-center gap-1 text-[10px] font-black bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl hover:bg-indigo-200 transition-all shadow-sm"
+          className={`flex items-center gap-1 font-black bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl hover:bg-indigo-200 transition-all shadow-sm ${getCls('sub')}`}
         >
           <Plus size={12} /> เพิ่มกรอบใหม่
         </button>
@@ -201,10 +207,10 @@ const Profile = () => {
         <div className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-2xl border border-amber-100 shadow-sm">
           <Info size={14} className="shrink-0" />
           <div className="flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-tight">
+            <p className={`font-bold uppercase tracking-tight ${getCls('sub')}`}>
               สิทธิ์เปลี่ยนรูป: 3 ครั้ง / เดือน
             </p>
-            <p className="text-[9px] font-medium opacity-80">
+            <p className={`font-medium opacity-80 ${getCls('sub')}`}>
               เดือนนี้ใช้ไปแล้ว: {user?.avatar_update_count || 0} / 3 ครั้ง
             </p>
           </div>
@@ -213,7 +219,7 @@ const Profile = () => {
 
       {/* Name Input */}
       <div className="space-y-3 px-1 text-left">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+        <p className={`font-black text-gray-400 uppercase tracking-widest ml-1 ${getCls('sub')}`}>
           ข้อมูลส่วนตัว
         </p>
         <div className="relative">
@@ -225,17 +231,17 @@ const Profile = () => {
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="ชื่อ-นามสกุล (เปลี่ยนได้เดือนละครั้ง)"
-            className="w-full pl-11 pr-4 py-4 bg-white border border-gray-100 rounded-2xl font-bold text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none shadow-sm"
+            className={`w-full pl-11 pr-4 py-4 bg-white border border-gray-100 rounded-2xl font-bold text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all outline-none shadow-sm ${getCls('normal')}`}
           />
         </div>
-        <p className="text-[9px] font-bold text-rose-400 px-2 uppercase tracking-tighter">
+        <p className={`font-bold text-rose-400 px-2 uppercase tracking-tighter ${getCls('sub')}`}>
           * ชื่อเปลี่ยนได้เดือนละ 1 ครั้ง | รูปเปลี่ยนได้เดือนละ 3 ครั้ง
         </p>
       </div>
 
       {/* Frame Selection - Horizontal Scroll (2 Rows) */}
       <div className="space-y-3 text-left">
-        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+        <p className={`font-black text-gray-400 uppercase tracking-widest ml-1 ${getCls('sub')}`}>
           เลือกกรอบโปรไฟล์
         </p>
         
@@ -254,10 +260,10 @@ const Profile = () => {
                       <IconPicker type={f.icon_type} size={16} />
                     </div>
                     <div className="flex flex-col text-left overflow-hidden">
-                      <span className={`text-[11px] font-black truncate ${selectedFrame === f.css_class ? "text-indigo-600" : "text-gray-600"}`}>
+                      <span className={`font-black truncate ${getCls('sub')} ${selectedFrame === f.css_class ? "text-indigo-600" : "text-gray-600"}`}>
                         {f.name}
                       </span>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+                      <span className={`font-bold text-gray-400 uppercase tracking-tighter ${getCls('sub')}`}>
                         By {f.creator?.full_name || "System"}
                       </span>
                     </div>
@@ -277,10 +283,10 @@ const Profile = () => {
                       <IconPicker type={f.icon_type} size={16} />
                     </div>
                     <div className="flex flex-col text-left overflow-hidden">
-                      <span className={`text-[11px] font-black truncate ${selectedFrame === f.css_class ? "text-indigo-600" : "text-gray-600"}`}>
+                      <span className={`font-black truncate ${getCls('sub')} ${selectedFrame === f.css_class ? "text-indigo-600" : "text-gray-600"}`}>
                         {f.name}
                       </span>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+                      <span className={`font-bold text-gray-400 uppercase tracking-tighter ${getCls('sub')}`}>
                         By {f.creator?.full_name || "System"}
                       </span>
                     </div>
@@ -290,7 +296,7 @@ const Profile = () => {
             </>
           ) : (
             <div className="text-center py-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+              <p className={`font-bold text-gray-400 uppercase tracking-widest ${getCls('sub')}`}>
                 ยังไม่มีรายการกรอบ
               </p>
             </div>
@@ -301,7 +307,7 @@ const Profile = () => {
       {/* Save Button */}
       <button
         onClick={handleUpdateProfile}
-        className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-gray-200 active:scale-[0.98] transition-all"
+        className={`w-full bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-gray-200 active:scale-[0.98] transition-all ${getCls('normal')}`}
       >
         บันทึกการเปลี่ยนแปลง
       </button>

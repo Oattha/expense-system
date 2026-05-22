@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Swal from 'sweetalert2'; 
 
+// 🚨 นำเข้า useFontSize จาก Context
+import { useFontSize } from '../contexts/FontSizeContext';
+
 const Dashboard = () => {
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
     const [monthlySummary, setMonthlySummary] = useState({ income: 0, expense: 0, balance: 0 });
@@ -43,6 +46,9 @@ const Dashboard = () => {
     const [chartData, setChartData] = useState([]); 
     
     const navigate = useNavigate();
+
+    // 🚨 เรียกใช้งานฟังก์ชันแปลงคลาสขนาดตัวอักษร
+    const { getCls } = useFontSize();
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -208,8 +214,8 @@ const Dashboard = () => {
 
             <header className="bg-white px-6 py-3 flex justify-between items-center sticky top-0 z-20 border-b border-gray-50/50 shadow-sm">
                 <div className="text-left">
-                    <p className="text-[7px] font-black text-indigo-500/50 uppercase tracking-widest leading-none">ยินดีต้อนรับ</p>
-                    <h1 className="text-xs font-black text-gray-700 uppercase">สถิติการเงิน</h1>
+                    <p className={`font-black text-indigo-500/50 uppercase tracking-widest leading-none ${getCls('sub')}`}>ยินดีต้อนรับ</p>
+                    <h1 className={`font-black text-gray-700 uppercase ${getCls('normal')}`}>สถิติการเงิน</h1>
                 </div>
                 
                 <button 
@@ -226,10 +232,10 @@ const Dashboard = () => {
                 <div onClick={() => setShowAccounts(!showAccounts)} className="bg-indigo-600 p-4 rounded-2xl shadow-lg text-white relative overflow-hidden border border-indigo-700 cursor-pointer active:scale-[0.98] transition-all">
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 opacity-80 mb-1">
-                            <p className="text-[9px] font-bold uppercase tracking-wider">ยอดเงินรวมทุกบัญชี</p>
+                            <p className={`font-bold uppercase tracking-wider ${getCls('sub')}`}>ยอดเงินรวมทุกบัญชี</p>
                             {showAccounts ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         </div>
-                        <h2 className="text-2xl font-black tracking-tight">฿{totalBalanceAcrossAccounts.toLocaleString()}</h2>
+                        <h2 className={`font-black tracking-tight ${getCls('title')}`}>฿{totalBalanceAcrossAccounts.toLocaleString()}</h2>
                     </div>
                     <Wallet size={48} className="text-white/10 absolute -right-2 -bottom-2 rotate-12" />
                 </div>
@@ -237,8 +243,8 @@ const Dashboard = () => {
                 {showAccounts && (
                     <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm font-kanit animate-in slide-in-from-top-2 duration-300">
                         <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100">
-                            <div><p className="text-[9px] font-black text-gray-400 uppercase">เงินสดรวม</p><p className="text-xs font-black text-gray-700">฿{cashTotal.toLocaleString()}</p></div>
-                            <div><p className="text-[9px] font-black text-gray-400 uppercase">เงินฝากรวม</p><p className="text-xs font-black text-gray-700">฿{bankTotal.toLocaleString()}</p></div>
+                            <div><p className={`font-black text-gray-400 uppercase ${getCls('sub')}`}>เงินสดรวม</p><p className={`font-black text-gray-700 ${getCls('normal')}`}>฿{cashTotal.toLocaleString()}</p></div>
+                            <div><p className={`font-black text-gray-400 uppercase ${getCls('sub')}`}>เงินฝากรวม</p><p className={`font-black text-gray-700 ${getCls('normal')}`}>฿{bankTotal.toLocaleString()}</p></div>
                         </div>
                         <div className="space-y-2">
                             {accounts.map(acc => (
@@ -247,9 +253,9 @@ const Dashboard = () => {
                                         <div className={`p-1 rounded-lg ${acc.type.toLowerCase() === 'cash' ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
                                             {acc.type.toLowerCase() === 'cash' ? <Banknote size={12} /> : <Landmark size={12} />}
                                         </div>
-                                        <span className="text-[11px] font-bold text-gray-600">{acc.name}</span>
+                                        <span className={`font-bold text-gray-600 ${getCls('sub')}`}>{acc.name}</span>
                                     </div>
-                                    <span className="text-[11px] font-black text-gray-700">฿{Number(acc.balance).toLocaleString()}</span>
+                                    <span className={`font-black text-gray-700 ${getCls('normal')}`}>฿{Number(acc.balance).toLocaleString()}</span>
                                 </div>
                             ))}
                         </div>
@@ -258,9 +264,9 @@ const Dashboard = () => {
 
                 <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">สรุปรายการตามรอบบิล</h3>
+                        <h3 className={`font-black text-gray-400 uppercase tracking-widest leading-none ${getCls('sub')}`}>สรุปรายการตามรอบบิล</h3>
                         <div className="flex items-center gap-0.5 bg-indigo-50/50 px-1.5 py-0.5 rounded-md border border-indigo-50">
-                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="bg-transparent text-[8px] font-black text-indigo-600 outline-none cursor-pointer appearance-none pr-1">
+                            <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className={`bg-transparent font-black text-indigo-600 outline-none cursor-pointer appearance-none pr-1 ${getCls('sub')}`}>
                                 {months.map(m => (<option key={m.val} value={m.val}>{m.name}</option>))}
                             </select>
                             <ChevronDown size={8} className="text-indigo-400" />
@@ -268,16 +274,16 @@ const Dashboard = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-1 text-center border-t border-gray-50 pt-2">
                         <div onClick={() => navigate(`/report?type=income&month=${selectedMonth}`)} className="space-y-0.5 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-0.5 px-0.5 rounded-lg">
-                            <p className="text-[7px] font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5">รายรับ <ArrowRight size={6} className="text-gray-300"/></p>
-                            <p className="text-[10px] font-black text-green-500 flex items-center justify-center gap-0.5"><TrendingUp size={8} /> ฿{monthlySummary.income.toLocaleString()}</p>
+                            <p className={`font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5 ${getCls('sub')}`}>รายรับ <ArrowRight size={6} className="text-gray-300"/></p>
+                            <p className={`font-black text-green-500 flex items-center justify-center gap-0.5 ${getCls('normal')}`}><TrendingUp size={8} /> ฿{monthlySummary.income.toLocaleString()}</p>
                         </div>
                         <div onClick={() => navigate(`/report?type=expense&month=${selectedMonth}`)} className="space-y-0.5 border-r border-gray-50 cursor-pointer active:bg-gray-50 transition-colors py-0.5 px-0.5 rounded-lg">
-                            <p className="text-[7px] font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5">รายจ่าย <ArrowRight size={6} className="text-gray-300"/></p>
-                            <p className="text-[10px] font-black text-red-500 flex items-center justify-center gap-0.5"><TrendingDown size={8} /> ฿{monthlySummary.expense.toLocaleString()}</p>
+                            <p className={`font-bold text-gray-400 uppercase flex items-center justify-center gap-0.5 ${getCls('sub')}`}>รายจ่าย <ArrowRight size={6} className="text-gray-300"/></p>
+                            <p className={`font-black text-red-500 flex items-center justify-center gap-0.5 ${getCls('normal')}`}><TrendingDown size={8} /> ฿{monthlySummary.expense.toLocaleString()}</p>
                         </div>
                         <div className="space-y-0.5 py-0.5 px-0.5">
-                            <p className="text-[7px] font-bold text-gray-400 uppercase">คงเหลือ</p>
-                            <p className="text-[10px] font-black text-indigo-600">฿{(monthlySummary.income - monthlySummary.expense).toLocaleString()}</p>
+                            <p className={`font-bold text-gray-400 uppercase ${getCls('sub')}`}>คงเหลือ</p>
+                            <p className={`font-black text-indigo-600 ${getCls('normal')}`}>฿{(monthlySummary.income - monthlySummary.expense).toLocaleString()}</p>
                         </div>
                     </div>
                 </div>
@@ -286,9 +292,9 @@ const Dashboard = () => {
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-1.5">
                             <CalendarDays size={12} className="text-indigo-500" />
-                            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">รอบตัดบัญชี (แก้ได้ 2 ครั้ง)</h3>
+                            <h3 className={`font-black text-gray-400 uppercase tracking-widest ${getCls('sub')}`}>รอบตัดบัญชี (แก้ได้ 2 ครั้ง)</h3>
                         </div>
-                        <button onClick={() => { setIsEditingCycle(!isEditingCycle); setTempCycleDate(cycleDate); }} className="text-[8px] text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md">
+                        <button onClick={() => { setIsEditingCycle(!isEditingCycle); setTempCycleDate(cycleDate); }} className={`text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md ${getCls('sub')}`}>
                             {isEditingCycle ? 'ยกเลิก' : 'ตั้งค่า'}
                         </button>
                     </div>
@@ -296,31 +302,31 @@ const Dashboard = () => {
                     {isEditingCycle ? (
                         <div className="space-y-1 mb-3 border-b border-gray-50 pb-3">
                             <div className="flex gap-2 items-center">
-                                <select className="flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 text-xs bg-transparent cursor-pointer" value={tempCycleDate} onChange={(e) => setTempCycleDate(Number(e.target.value))}>
+                                <select className={`flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 bg-transparent cursor-pointer ${getCls('normal')}`} value={tempCycleDate} onChange={(e) => setTempCycleDate(Number(e.target.value))}>
                                     {[...Array(28)].map((_, i) => (
                                         <option key={i + 1} value={i + 1}>วันที่ {i + 1}</option>
                                     ))}
                                     <option value={31}>วันสิ้นเดือน</option>
                                 </select>
-                                <button onClick={handleUpdateCycle} className="bg-indigo-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">บันทึก</button>
+                                <button onClick={handleUpdateCycle} className={`bg-indigo-600 text-white px-3 py-1 rounded font-black uppercase shadow-md active:scale-95 transition-all ${getCls('sub')}`}>บันทึก</button>
                             </div>
-                            <p className="text-[7px] text-gray-400 font-bold uppercase tracking-tighter">* แก้ไขได้อีก {2 - cycleUpdateCount} ครั้ง</p>
+                            <p className={`text-gray-400 font-bold uppercase tracking-tighter ${getCls('sub')}`}>* แก้ไขได้อีก {2 - cycleUpdateCount} ครั้ง</p>
                         </div>
                     ) : (
                         <div className="mb-3 border-b border-gray-50 pb-3 flex items-end justify-between">
-                            <p className="text-xs font-black text-gray-700 leading-none">
-                                วันที่ <span className="text-lg text-indigo-600 leading-none">{cycleDate === 31 ? 'สิ้นเดือน' : cycleDate}</span>
+                            <p className={`font-black text-gray-700 leading-none ${getCls('normal')}`}>
+                                วันที่ <span className={`text-indigo-600 leading-none ${getCls('title')}`}>{cycleDate === 31 ? 'สิ้นเดือน' : cycleDate}</span>
                             </p>
-                            <p className="text-[8px] font-bold text-gray-400 uppercase leading-none mb-0.5">ของทุกเดือน</p>
+                            <p className={`font-bold text-gray-400 uppercase leading-none mb-0.5 ${getCls('sub')}`}>ของทุกเดือน</p>
                         </div>
                     )}
 
                     <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-1.5">
                             <Target size={12} className="text-indigo-500" />
-                            <h3 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">จำกัดการใช้เงิน (แก้ได้ 2 ครั้ง)</h3>
+                            <h3 className={`font-black text-gray-400 uppercase tracking-widest ${getCls('sub')}`}>จำกัดการใช้เงิน (แก้ได้ 2 ครั้ง)</h3>
                         </div>
-                        <button onClick={() => { setIsEditingBudget(!isEditingBudget); setTempBudget(budget); }} className="text-[8px] text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md">
+                        <button onClick={() => { setIsEditingBudget(!isEditingBudget); setTempBudget(budget); }} className={`text-indigo-500 font-black uppercase bg-indigo-50 px-2 py-0.5 rounded-md ${getCls('sub')}`}>
                             {isEditingBudget ? 'ยกเลิก' : 'ตั้งค่า'}
                         </button>
                     </div>
@@ -328,17 +334,17 @@ const Dashboard = () => {
                     {isEditingBudget ? (
                         <div className="space-y-1">
                             <div className="flex gap-2">
-                                <input type="number" className="flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 text-xs" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)} autoFocus />
-                                <button onClick={handleUpdateBudget} className="bg-indigo-600 text-white px-3 py-1 rounded text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">บันทึก</button>
+                                <input type="number" className={`flex-1 border-b border-indigo-100 focus:border-indigo-500 outline-none px-1 py-0.5 font-black text-gray-700 ${getCls('normal')}`} value={tempBudget} onChange={(e) => setTempBudget(e.target.value)} autoFocus />
+                                <button onClick={handleUpdateBudget} className={`bg-indigo-600 text-white px-3 py-1 rounded font-black uppercase shadow-md active:scale-95 transition-all ${getCls('sub')}`}>บันทึก</button>
                             </div>
-                            <p className="text-[7px] text-gray-400 font-bold uppercase tracking-tighter">* แก้ไขได้อีก {2 - budgetUpdateCount} ครั้ง</p>
+                            <p className={`text-gray-400 font-bold uppercase tracking-tighter ${getCls('sub')}`}>* แก้ไขได้อีก {2 - budgetUpdateCount} ครั้ง</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
                             <div className="flex justify-between items-end">
-                                <div><p className="text-lg font-black text-gray-700 leading-none">฿{budget.toLocaleString()}</p></div>
+                                <div><p className={`font-black text-gray-700 leading-none ${getCls('title')}`}>฿{budget.toLocaleString()}</p></div>
                                 <div className="text-right">
-                                    <p className={`text-[9px] font-black ${overBudget ? 'text-red-500' : 'text-green-600'}`}>
+                                    <p className={`font-black ${overBudget ? 'text-red-500' : 'text-green-600'} ${getCls('sub')}`}>
                                         {overBudget ? `เกินงบ ฿${Math.abs(remainingInBudget).toLocaleString()}` : `ใช้ได้อีก ฿${remainingInBudget.toLocaleString()}`}
                                     </p>
                                 </div>
@@ -352,10 +358,10 @@ const Dashboard = () => {
 
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2"><BarChart3 size={16} className="text-indigo-500" /><h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">แนวโน้มเงินเก็บ</h3></div>
+                        <div className="flex items-center gap-2"><BarChart3 size={16} className="text-indigo-500" /><h3 className={`font-black text-gray-400 uppercase tracking-widest ${getCls('sub')}`}>แนวโน้มเงินเก็บ</h3></div>
                         <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
                             <CalendarDays size={10} className="text-indigo-500" />
-                            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="bg-transparent text-[9px] font-black text-gray-600 outline-none cursor-pointer">
+                            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className={`bg-transparent font-black text-gray-600 outline-none cursor-pointer ${getCls('sub')}`}>
                                 {years.map(y => (<option key={y} value={y}>พ.ศ. {y + 543}</option>))}
                             </select>
                         </div>
@@ -375,14 +381,14 @@ const Dashboard = () => {
 
                 <div className="space-y-3">
                     <button onClick={() => navigate('/transaction')} className="w-full bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group active:bg-gray-50 transition-all shadow-sm">
-                        <div className="flex items-center gap-3"><div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Plus size={18} /></div><span className="text-sm font-black text-gray-600">บันทึกรายรับ-รายจ่าย</span></div>
+                        <div className="flex items-center gap-3"><div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Plus size={18} /></div><span className={`font-black text-gray-600 ${getCls('normal')}`}>บันทึกรายรับ-รายจ่าย</span></div>
                         <ArrowRight size={16} className="text-gray-300 group-hover:translate-x-1 transition-transform" />
                     </button>
 
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
                         <div className="p-4 flex items-center justify-between border-b border-gray-50">
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">รายการล่าสุด</h3>
-                            <button onClick={() => navigate('/transaction')} className="text-[9px] font-black text-indigo-500 uppercase">ดูทั้งหมด</button>
+                            <h3 className={`font-black text-gray-400 uppercase tracking-widest ${getCls('sub')}`}>รายการล่าสุด</h3>
+                            <button onClick={() => navigate('/transaction')} className={`font-black text-indigo-500 uppercase ${getCls('sub')}`}>ดูทั้งหมด</button>
                         </div>
                         {transactions.length > 0 ? (
                             transactions.slice(0, 5).map(item => {
@@ -398,26 +404,26 @@ const Dashboard = () => {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-1.5">
-                                                    <p className="text-sm font-black text-gray-700 leading-tight">
+                                                    <p className={`font-black text-gray-700 leading-tight ${getCls('normal')}`}>
                                                         {isTransfer ? `โอนไปยัง ${toAccount?.name || '...'}` : (item.category || 'ทั่วไป')}
                                                     </p>
                                                     {isTransfer && <ArrowRightLeft size={10} className="text-indigo-400" />}
                                                 </div>
                                                 <div className="flex items-center gap-1 mt-0.5 opacity-60">
                                                     {account?.type.toLowerCase() === 'cash' ? <Wallet size={8} className="text-orange-400" /> : <Landmark size={12} className="text-blue-400" />}
-                                                    <span className="text-[8px] font-black text-gray-500 uppercase">{account?.name || '-'}</span>
+                                                    <span className={`font-black text-gray-500 uppercase ${getCls('sub')}`}>{account?.name || '-'}</span>
                                                 </div>
-                                                <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} {new Date(item.date).getFullYear() + 543}</p>
+                                                <p className={`text-gray-400 font-bold uppercase mt-1 ${getCls('sub')}`}>{new Date(item.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} {new Date(item.date).getFullYear() + 543}</p>
                                             </div>
                                         </div>
-                                        <p className={`text-sm font-black ${isTransfer ? 'text-indigo-600' : item.type === 'expense' ? 'text-red-500' : 'text-green-600'}`}>
+                                        <p className={`font-black ${isTransfer ? 'text-indigo-600' : item.type === 'expense' ? 'text-red-500' : 'text-green-600'} ${getCls('normal')}`}>
                                             {isTransfer ? '' : item.type === 'expense' ? '-' : '+'} ฿{Number(item.amount).toLocaleString()}
                                         </p>
                                     </div>
                                 );
                             })
                         ) : (
-                            <div className="p-8 text-center"><p className="text-xs text-gray-400 font-medium font-kanit">ไม่มีรายการ</p></div>
+                            <div className="p-8 text-center"><p className={`text-gray-400 font-medium font-kanit ${getCls('normal')}`}>ไม่มีรายการ</p></div>
                         )}
                     </div>
                 </div>

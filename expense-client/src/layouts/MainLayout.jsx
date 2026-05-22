@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
     User, LayoutDashboard, Wallet, PlusCircle, LogOut, 
-    IdCard, ChevronRight, Info, Headset, ShieldCheck 
+    IdCard, ChevronRight, Info, Headset, ShieldCheck,
+    Type, Check // นำเข้า Type สำหรับปุ่มไอคอน และ Check สำหรับบอกสถานะที่เลือก
 } from 'lucide-react';
 import Swal from 'sweetalert2'; 
 
@@ -10,6 +12,20 @@ const MainLayout = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // 🚨 [เพิ่มใหม่] State คุมการเปิด-ปิดกล่องขนาดเล็กยื่นลงมาด้านล่างตัวปุ่มกด
+    const [showFontDropdown, setShowFontDropdown] = useState(false);
+    const [currentSize, setCurrentSize] = useState(() => {
+        return localStorage.getItem('global_font_size') || 'text-sm';
+    });
+
+    // 🚨 [เพิ่มใหม่] ฟังก์ชันเซตค่าขนาดอักษรส่วนกลางของระบบแล้วรีเฟรชหน้าเว็บทันที
+    const changeFontSizeInline = (size) => {
+        localStorage.setItem('global_font_size', size);
+        setCurrentSize(size);
+        setShowFontDropdown(false);
+        window.location.reload(); // รีเฟรชแบบสั้นเพื่อให้ main.jsx โหลดคลาสฟอนต์คลุมใหม่ทั่วเว็บ
+    };
 
     // --- ฟังก์ชันแสดงคอมโพเนนต์ Avatar พร้อมกรอบ (Frame) ---
     const AvatarDisplay = ({ size = "w-12 h-12", iconSize = 24 }) => {
@@ -24,11 +40,11 @@ const MainLayout = () => {
             >
                 {user?.profile_image ? (
                     <img 
-                        /* แก้ไข: เปลี่ยนจากดึงผ่าน localhost/uploads มาใช้ URL จาก Cloudinary โดยตรง[cite: 5] */
+                        /* แก้ไข: เปลี่ยนจากดึงผ่าน localhost/uploads มาใช้ URL จาก Cloudinary โดยตรง */
                         src={user.profile_image} 
                         className="w-full h-full object-cover" 
                         alt="Profile"
-                        /* Fallback กรณีรูปโหลดไม่ได้[cite: 4] */
+                        /* Fallback กรณีรูปโหลดไม่ได้ */
                         onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=' + (user?.full_name || 'User'); }}
                     />
                 ) : (
@@ -91,8 +107,37 @@ const MainLayout = () => {
             
             {/* Sidebar (Desktop) */}
             <div className="hidden md:flex w-72 bg-indigo-950 text-white flex-col shadow-2xl z-20">
-                <div className="p-8 text-2xl font-black tracking-tighter border-b border-indigo-900/50 uppercase">
-                    Expense <span className="text-indigo-400">Tracker</span>
+                {/* 🚨 [แก้ไขจุดนี้] เพิ่มแท็ก relative และโครงสร้างปุ่มเรียก Dropdown ฟอนต์ขนาดเล็กใต้ชื่อแอปคอม */}
+                <div className="p-8 text-2xl font-black tracking-tighter border-b border-indigo-900/50 uppercase flex justify-between items-center relative">
+                    <span>Expense <span className="text-indigo-400">Tracker</span></span>
+                    
+                    <button 
+                        onClick={() => setShowFontDropdown(!showFontDropdown)}
+                        className={`p-2 rounded-xl transition-all active:scale-90 ${showFontDropdown ? 'bg-indigo-500 text-white shadow-md' : 'bg-indigo-900/40 text-indigo-300 hover:text-white'}`}
+                    >
+                        <Type size={16} />
+                    </button>
+
+                    {/* กล่อง Dropdown ขนาดเล็กสำหรับฝั่งคอมพิวเตอร์ (Desktop Menu) */}
+                    {showFontDropdown && (
+                        <div className="absolute right-6 top-20 w-44 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 flex flex-col text-gray-700 animate-in fade-in zoom-in-95 duration-200">
+                            {[
+                                { id: 'text-xs', label: 'A- ตัวอักษรเล็ก' },
+                                { id: 'text-sm', label: 'A ขนาดปกติ' },
+                                { id: 'text-lg', label: 'A+ ตัวอักษรใหญ่' }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => changeFontSizeInline(opt.id)}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-black transition-colors ${currentSize === opt.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-600'}`}
+                                >
+                                    <span>{opt.label}</span>
+                                    {currentSize === opt.id && <Check size={12} className="text-indigo-600 font-bold" />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 
                 {/* User Profile Section - ปรับใช้ AvatarDisplay ใหม่ */}
@@ -141,7 +186,7 @@ const MainLayout = () => {
                         onClick={showVersionInfo}
                         className="w-full flex items-center justify-between px-4 py-1 text-[9px] text-indigo-500 font-black uppercase tracking-widest hover:text-indigo-300 transition-colors"
                     >
-                        <span>Ver 2.4.0</span>
+                        <span>Ver 2.5.1</span>
                         <ShieldCheck size={12} />
                     </button>
 
@@ -155,7 +200,7 @@ const MainLayout = () => {
             <div className="flex-1 flex flex-col min-w-0 bg-white md:bg-gray-50 relative">
                 
                 {/* Profile Header (Mobile) - ปรับใช้ AvatarDisplay ใหม่ */}
-                <div className="md:hidden bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 z-30">
+                <div className="md:hidden bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 z-30 relative">
                     <div className="flex items-center gap-3">
                         <AvatarDisplay size="w-10 h-10" iconSize={20} />
                         <div>
@@ -170,9 +215,40 @@ const MainLayout = () => {
                             </button>
                         </div>
                     </div>
-                    <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-                        <LogOut size={20} />
-                    </button>
+                    
+                    {/* 🚨 [แก้ไขจุดนี้] ปุ่มเรียกกล่องข้อความปรับฟอนต์ชิ้นเล็กบริเวณแถบ Mobile Header */}
+                    <div className="flex items-center gap-1 relative">
+                        <button 
+                            onClick={() => setShowFontDropdown(!showFontDropdown)} 
+                            className={`p-2 rounded-lg transition-colors active:scale-90 ${showFontDropdown ? 'bg-indigo-50 text-indigo-600' : 'text-indigo-500 hover:bg-indigo-50'}`}
+                        >
+                            <Type size={20} />
+                        </button>
+                        <button onClick={handleLogout} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                            <LogOut size={20} />
+                        </button>
+
+                        {/* กล่องข้อความยื่นลงมาขนาดกะทัดรัด (Mobile Dropdown Menu) */}
+                        {showFontDropdown && (
+                            <div className="absolute right-10 top-12 w-40 bg-white rounded-2xl shadow-2xl border border-gray-100 p-1.5 z-50 flex flex-col text-gray-700 animate-in fade-in slide-in-from-top-2 duration-200">
+                                {[
+                                    { id: 'text-xs', label: 'A- ตัวเล็ก' },
+                                    { id: 'text-sm', label: 'A ปกติ' },
+                                    { id: 'text-lg', label: 'A+ ตัวใหญ่' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => changeFontSizeInline(opt.id)}
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-black ${currentSize === opt.id ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 active:bg-gray-50'}`}
+                                    >
+                                        <span>{opt.label}</span>
+                                        {currentSize === opt.id && <Check size={12} className="text-indigo-600 font-bold" />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-10 pb-32 md:pb-10">
