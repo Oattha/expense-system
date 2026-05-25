@@ -9,6 +9,30 @@ import Swal from 'sweetalert2';
 import { useFontSize } from '../contexts/FontSizeContext';
 
 const Dashboard = () => {
+    // 🚨 [เพิ่มใหม่] ฟังก์ชันคำนวณเดือนและปีให้ตรงกับรอบบิลจริง
+    const getInitialCycleDate = () => {
+        const date = new Date();
+        let m = date.getMonth() + 1;
+        let y = date.getFullYear();
+        const d = date.getDate();
+        
+        // ดึงรอบบิลจากเครื่อง (ถ้าไม่มีให้เป็นวันที่ 1)
+        const cycle = Number(localStorage.getItem('user_cycle_date')) || 1;
+
+        // ถ้าวันนี้เลยวันตัดรอบมาแล้ว ให้ขยับเดือนไปข้างหน้า 1 เดือน (เพื่อแสดงรอบบิลใหม่)
+        if (cycle !== 1 && cycle !== 31 && d >= cycle) {
+            if (m === 12) {
+                m = 1;
+                y += 1;
+            } else {
+                m += 1;
+            }
+        }
+        return { month: m, year: y };
+    };
+
+    const initDate = getInitialCycleDate();
+
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
     const [monthlySummary, setMonthlySummary] = useState({ income: 0, expense: 0, balance: 0 });
     const [accounts, setAccounts] = useState([]);
@@ -21,11 +45,12 @@ const Dashboard = () => {
     const audioRef = useRef(new Audio()); 
 
     const currentYear = new Date().getFullYear();
-    const [selectedYear, setSelectedYear] = useState(currentYear);
+    // 🚨 ตั้งค่าเริ่มต้น ปี ให้สัมพันธ์กับรอบบิล
+    const [selectedYear, setSelectedYear] = useState(initDate.year);
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
-    const currentMonth = new Date().getMonth() + 1; 
-    const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+    // 🚨 ตั้งค่าเริ่มต้น เดือน ให้สัมพันธ์กับรอบบิล
+    const [selectedMonth, setSelectedMonth] = useState(initDate.month);
     const months = [
         { val: 1, name: 'มกราคม' }, { val: 2, name: 'กุมภาพันธ์' }, { val: 3, name: 'มีนาคม' },
         { val: 4, name: 'เมษายน' }, { val: 5, name: 'พฤษภาคม' }, { val: 6, name: 'มิถุนายน' },
@@ -89,11 +114,17 @@ const Dashboard = () => {
             if (profileRes.data) {
                 setBudget(Number(profileRes.data.monthly_budget) || 0); 
                 setBudgetUpdateCount(profileRes.data.budget_update_count || 0); 
-                setCycleDate(profileRes.data.cycle_date || 1);
+                
+                const fetchedCycleDate = profileRes.data.cycle_date || 1;
+                setCycleDate(fetchedCycleDate);
                 setCycleUpdateCount(profileRes.data.cycle_update_count || 0);
+
+                // 🚨 [เพิ่มใหม่] บันทึกวันตัดรอบลงเครื่อง เพื่อให้คำนวณเดือนถูกเป๊ะตั้งแต่โหลดหน้าเว็บครั้งแรก
+                localStorage.setItem('user_cycle_date', fetchedCycleDate);
             }
 
-            if (selectedMonth === currentMonth && budget > 0 && currentMonthRes.data.expense > budget) {
+            const currentRealMonth = new Date().getMonth() + 1;
+            if (selectedMonth === currentRealMonth && budget > 0 && currentMonthRes.data.expense > budget) {
                 Swal.fire({ icon: 'warning', title: 'เกินงบแล้วนะพี่!', confirmButtonColor: '#ef4444' });
             }
 
@@ -157,6 +188,9 @@ const Dashboard = () => {
             setCycleDate(Number(tempCycleDate));
             setCycleUpdateCount(res.data.count); 
             setIsEditingCycle(false);
+
+            // 🚨 [เพิ่มใหม่] อัปเดตค่ารอบบิลในเครื่องทันที
+            localStorage.setItem('user_cycle_date', Number(tempCycleDate));
             
             Swal.fire({
                 icon: 'success', 
