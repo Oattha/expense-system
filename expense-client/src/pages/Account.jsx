@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { ChevronLeft, Plus, Landmark, Banknote, Star, MoreVertical, Edit2, Power, X, Archive, RotateCcw, Check } from 'lucide-react';
+// 🚨 เพิ่มไอคอน TrendingUp สำหรับพอร์ตการลงทุน
+import { ChevronLeft, Plus, Landmark, Banknote, Star, MoreVertical, Edit2, Power, X, Archive, RotateCcw, Check, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
@@ -119,7 +120,6 @@ const Account = () => {
             <div className={`space-y-3 mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300 font-kanit ${isArchived ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                 <div className="flex items-center gap-2 px-1 mb-2">
                     <div className={`w-1 h-3 rounded-full ${isArchived ? 'bg-gray-400' : 'bg-indigo-500'}`}></div>
-                    {/* เปลี่ยนมาใช้ getCls('sub') เพื่อปรับสเกลหัวข้อย่อย */}
                     <h3 className={`${getCls('sub')} font-black text-gray-400 uppercase tracking-widest`}>{typeLabel}</h3>
                 </div>
                 {filtered.map(acc => {
@@ -127,23 +127,24 @@ const Account = () => {
                     return (
                         <div key={acc.id} className={`bg-white p-4 rounded-xl flex items-center justify-between border transition-all ${isDefault ? 'border-indigo-500 ring-1 ring-indigo-100 shadow-md' : 'border-gray-100 shadow-sm'}`}>
                             <div className="flex items-center gap-4">
-                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white ${acc.type === 'Cash' ? 'bg-orange-500' : ThaiBankColor(acc.name)}`}>
-                                    {acc.type === 'Cash' ? <Banknote size={18} /> : <Landmark size={18} />}
+                                {/* 🚨 [แก้ไขจุดนี้] เพิ่มเงื่อนไขสีและไอคอนสำหรับประเภท Investment */}
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white ${acc.type === 'Cash' ? 'bg-orange-500' : acc.type === 'Investment' ? 'bg-purple-600' : ThaiBankColor(acc.name)}`}>
+                                    {acc.type === 'Cash' ? <Banknote size={18} /> : acc.type === 'Investment' ? <TrendingUp size={18} /> : <Landmark size={18} />}
                                 </div>
                                 <div onClick={() => !isArchived && handleSetDefault(acc.id)} className={isArchived ? 'cursor-default' : 'cursor-pointer'}>
-                                    {/* ปรับสเกลชื่อกระเป๋าเงินตามขนาดที่กดเลือกส่วนกลาง */}
                                     <p className={`font-black text-gray-700 leading-tight flex items-center gap-1 uppercase ${getCls('normal')}`}>
                                         {acc.name}
                                         {isDefault && <Star size={10} className="fill-yellow-400 text-yellow-400" />}
                                     </p>
                                     <p className={`font-bold text-gray-400 uppercase mt-0.5 ${getCls('sub')}`}>
-                                        {acc.type === 'Savings' ? 'บัญชีธนาคาร' : 'เงินสด'} {isDefault && <span className="text-indigo-500 font-black ml-1">• หลัก</span>}
+                                        {/* 🚨 [แก้ไขจุดนี้] เพิ่มคำบรรยายประเภทย่อย Investment */}
+                                        {acc.type === 'Savings' ? 'บัญชีธนาคาร' : acc.type === 'Investment' ? 'พอร์ตลงทุน' : 'เงินสด'} 
+                                        {isDefault && <span className="text-indigo-500 font-black ml-1">• หลัก</span>}
                                         {isArchived && <span className="text-red-400 font-black ml-1">• ปิดใช้งานแล้ว</span>}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* ปรับสเกลยอดเงินตามขนาดส่วนกลาง */}
                                 <p className={`font-black text-gray-500 mr-1 tracking-tight ${getCls('normal')}`}>฿{acc.balance.toLocaleString()}</p>
                                 {isArchived ? (
                                     <button onClick={() => handleToggleActive(acc)} className="p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-green-50 hover:text-green-600 transition-all shadow-sm">
@@ -178,7 +179,6 @@ const Account = () => {
                 <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-indigo-600 transition-colors">
                     <ChevronLeft size={24} />
                 </button>
-                {/* ส่วนหัวหน้าจอปรับขนาดตามภาพรวมหลัก */}
                 <h2 className={`font-black tracking-tight text-gray-700 uppercase ${getCls('sub')}`}>จัดการกระเป๋าเงิน</h2>
                 <button 
                     onClick={() => { setShowAddForm(!showAddForm); setEditingAcc(null); }}
@@ -212,6 +212,8 @@ const Account = () => {
                                     <option value="">ประเภท...</option>
                                     <option value="Savings">บัญชีธนาคาร</option>
                                     <option value="Cash">เงินสด / กระเป๋าตัง</option>
+                                    {/* 🚨 [เพิ่มใหม่] ตัวเลือกพอร์ตการลงทุน */}
+                                    <option value="Investment">พอร์ตลงทุน (หุ้น / คริปโต)</option>
                                 </select>
                                 <input type="number" placeholder="ยอดเงินเริ่มต้น" className={`w-full bg-gray-50 border border-gray-200 p-4 rounded-2xl outline-none font-bold focus:ring-2 ring-indigo-50 transition-all ${getCls('sub')}`} value={newAcc.balance} onChange={e => setNewAcc({...newAcc, balance: e.target.value})} required />
                             </div>
@@ -238,7 +240,8 @@ const Account = () => {
                             <div className="relative">
                                 <input 
                                     type="text" 
-                                    placeholder={newAcc.type === 'Cash' ? "เช่น กระเป๋าตังหลัก, เงินซ่อนเมีย..." : "หรือระบุชื่อบัญชีเอง..."}
+                                    // 🚨 [แก้ไข] คำแนะนำ Placeholder ให้เปลี่ยนตามประเภท
+                                    placeholder={newAcc.type === 'Cash' ? "เช่น กระเป๋าตังหลัก..." : newAcc.type === 'Investment' ? "เช่น พอร์ตหุ้น SCB, Binance, Bitkub..." : "หรือระบุชื่อบัญชีเอง..."}
                                     className={`w-full border border-gray-100 p-4 rounded-2xl font-black text-gray-700 focus:ring-2 ring-indigo-50 transition-all ${getCls('sub')}`} 
                                     value={newAcc.name} 
                                     onChange={e => setNewAcc({...newAcc, name: e.target.value})} 
@@ -284,8 +287,11 @@ const Account = () => {
 
                 {accounts.length > 0 ? (
                     <>
-                        {renderAccountList("กระเป๋าเงินสด / เป๋าตัง", (acc) => acc.type === 'Cash' && acc.is_active)}
+                        {/* 🚨 [เพิ่มใหม่] ให้ Render ข้อมูลของหมวดหมู่ Investment โผล่ในลิสต์ด้วย */}
+                        {renderAccountList("พอร์ตการลงทุน (หุ้น / Crypto)", (acc) => acc.type === 'Investment' && acc.is_active)}
                         {renderAccountList("บัญชีธนาคาร / บัตร", (acc) => acc.type === 'Savings' && acc.is_active)}
+                        {renderAccountList("กระเป๋าเงินสด / เป๋าตัง", (acc) => acc.type === 'Cash' && acc.is_active)}
+                        
                         {accounts.some(acc => !acc.is_active) && (
                             <div className="mt-10 pt-10 border-t border-dashed border-gray-200">
                                 {renderAccountList("บัญชีที่ปิดใช้งานแล้ว (Archive)", (acc) => !acc.is_active, true)}
